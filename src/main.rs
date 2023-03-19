@@ -1,4 +1,11 @@
-use std::{error::Error, io, env};
+use std::{
+    env,
+    error::Error,
+    fs::{metadata, File},
+    io::{self, Read},
+    process::exit,
+    time::Instant,
+};
 use tui::{
     backend::{Backend, CrosstermBackend},
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -14,9 +21,8 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 
-mod parse_log;
 mod log_line;
-
+mod parse_log;
 
 struct StatefulList<T> {
     state: ListState,
@@ -73,24 +79,35 @@ impl<T> StatefulList<T> {
     }
 }
 
-struct App<'a> {
-    items: StatefulList<(&'a str, usize)>,
+// struct App<'a> {
+struct App {
+    items: StatefulList<log_line::LogLine>,
+    // items: StatefulList<(&'a str, usize)>,
     // events: Vec<(&'a str, &'a str)>,
     show_popup: bool,
 }
 
-impl<'a> App<'a> {
-    fn new() -> App<'a> {
+// impl<'a> App<'a> {
+impl App {
+    // fn new() -> App<'a> {
+    //     App {
+    //         items: StatefulList::with_items(vec![
+    //             ("Item0", 1),
+    //             ("Item1", 2),
+    //             ("Item2", 1),
+    //             ("Item3", 3),
+    //             ("Item4", 1),
+    //             ("Item5", 4),
+    //             ("Item6", 1),
+    //         ]),
+    //         show_popup: false,
+    //     }
+    // }
+
+    // fn new(log_lines: Vec<log_line::LogLine>) -> App<'a> {
+    fn new(log_lines: Vec<log_line::LogLine>) -> App {
         App {
-            items: StatefulList::with_items(vec![
-                ("Item0", 1),
-                ("Item1", 2),
-                ("Item2", 1),
-                ("Item3", 3),
-                ("Item4", 1),
-                ("Item5", 4),
-                ("Item6", 1),
-            ]),
+            items: StatefulList::with_items(log_lines),
             show_popup: false,
         }
     }
@@ -103,8 +120,36 @@ impl<'a> App<'a> {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
+    let now = Instant::now();
+
     let args: Vec<String> = env::args().collect();
-    dbg!(args);
+    dbg!(&args);
+    if args.len() == 1 {
+        eprintln!("Missing parameter: log file!");
+        exit(-1);
+    }
+
+    let log_path = args[1].clone();
+
+    let meta = metadata(&log_path).expect("Failed to get meta data from path");
+    if !meta.is_file() {
+        eprintln!("Parameter log file is not a file!");
+        exit(-1);
+    }
+
+    let mut file = File::open(log_path)?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)?;
+
+    println!("Read file: {}ms", now.elapsed().as_millis());
+
+    let parser = parse_log::Parser {};
+    let log_lines = parser.parse_lines(&contents);
+    println!(
+        "Number of lines: {} in {}ms",
+        log_lines.len(),
+        now.elapsed().as_millis()
+    );
 
     // setup terminal
     enable_raw_mode()?;
@@ -114,7 +159,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut terminal = Terminal::new(backend)?;
 
     // create app and run it
-    let app = App::new();
+    let app = App::new(log_lines);
     let res = run_app(&mut terminal, app);
 
     // restore terminal
@@ -170,13 +215,13 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
         .items
         .iter()
         .map(|i| {
-            let mut lines = vec![Spans::from(i.0)];
-            for _ in 0..i.1 {
-                lines.push(Spans::from(Span::styled(
-                    "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-                    Style::default().add_modifier(Modifier::ITALIC),
-                )));
-            }
+            let mut lines = vec![Spans::from(&*i.date)];
+            // for _ in 0..i.1 {
+            lines.push(Spans::from(Span::styled(
+                i.slug(),
+                Style::default().add_modifier(Modifier::ITALIC),
+            )));
+            // }
             ListItem::new(lines).style(Style::default().fg(Color::Black).bg(Color::White))
         })
         .collect();
@@ -214,13 +259,15 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
         .style(Style::default().bg(Color::Blue));
 
     // f.render_widget(block, chunks[1]);
-    let (log_text, _) = app.items.selected_item().unwrap_or(&("default", 0));
-    let paragraph = Paragraph::new(Span::styled(*log_text, Style::default()))
-        .block(block)
-        // .alignment(Alignment::Center)
-        .wrap(Wrap { trim: true });
+    // let (log_text, _) = app.items.selected_item().unwrap_or(&("default", 0));
+    if let Some(log_text) = app.items.selected_item() {
+        let paragraph = Paragraph::new(Span::styled(&log_text.text, Style::default()))
+            .block(block)
+            // .alignment(Alignment::Center)
+            .wrap(Wrap { trim: true });
 
-    f.render_widget(paragraph, chunks[1]);
+        f.render_widget(paragraph, chunks[1]);
+    }
 
     // Render popup
     if app.show_popup {

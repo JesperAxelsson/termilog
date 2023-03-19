@@ -71,13 +71,13 @@ impl Parser {
         let mut result = Vec::new();
         let mut offset = 0;
 
-        println!("Logtext: '{}'", log_text.len());
+        // println!("Logtext: '{}'", log_text.len());
 
         while let Some(cap) = self.parse_line_caps(&log_text[offset..]) {
             // This is sooo fragile, but works!
             let mat = cap.get(4);
             offset += mat.unwrap().end();
-            println!("Offset: {} log end '{}'", offset, &log_text[offset..]);
+            // println!("Offset: {} log end '{}'", offset, &log_text[offset..]);
             result.push(log_line::LogLine {
                 text: cap[4].to_owned(),
                 source: cap[3].to_owned(),
