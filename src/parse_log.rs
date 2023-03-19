@@ -140,8 +140,7 @@ Log line 3"
     Log line 2
 Log line 3
 [2023-02-14 13:43:49] local.INFO: Incoming webhook: 8 
-[2023-02-14 13:43:49] local.INFO: Incoming webhook: 9 
-";
+[2023-02-14 13:43:49] local.INFO: Incoming webhook: 9 ";
 
         let p = Parser {};
         assert_eq!(
