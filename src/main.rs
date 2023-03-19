@@ -1,4 +1,4 @@
-use std::{error::Error, io};
+use std::{error::Error, io, env};
 use tui::{
     backend::{Backend, CrosstermBackend},
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -13,6 +13,10 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
+
+mod parse_log;
+mod log_line;
+
 
 struct StatefulList<T> {
     state: ListState,
@@ -99,6 +103,9 @@ impl<'a> App<'a> {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
+    let args: Vec<String> = env::args().collect();
+    dbg!(args);
+
     // setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
