@@ -1,7 +1,15 @@
+use lazy_static::lazy_static;
 use regex::{Captures, Regex};
 
 use crate::log_line;
 
+
+// TODO:
+// Maybe only parse one line of log and store offset.
+// Only parse multi-line when needed
+//
+// Test with this as well: https://regex101.com/r/eP0eD5/6
+// https://stackoverflow.com/questions/28864020/parse-multiline-log-entries-using-a-regex
 pub struct Parser {}
 
 impl Parser {
@@ -58,11 +66,15 @@ impl Parser {
     // pub fn parse_line_caps<'t>(&self, log_text: &'t str) -> Option<(Captures<'t>, CaptureLocations)> {
     pub fn parse_line_caps<'t>(&self, log_text: &'t str) -> Option<Captures<'t>> {
         // let reg = Regex::new(r"^\[(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})\] ([\w\.]+):\s+(.*)").expect("Failed parse regex");
-        let reg = Regex::new(r"^(?s)\n?\r?\[(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})\] ([\w\.]+):\s+(.*?)(?:\n?\r?\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]|$|\z)")
         // let reg = Regex::new(r"(^(?s)\n?\r?\[(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})\] ([\w\.]+):\s+(.*?))+(?:\n?\r?\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]|$|\z)")
-            .expect("Failed parse regex");
 
-        let cap = reg.captures(log_text);
+        // let reg = Regex::new(r"^(?s)\n?\r?\[(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})\] ([\w\.]+):\s+(.*?)(?:\n?\r?\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]|$|\z)")
+        // .expect("Failed parse regex");
+
+        lazy_static! {
+            static ref REG : Regex = Regex::new(r"^(?s)\n?\r?\[(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})\] ([\w\.]+):\s+(.*?)(?:\n?\r?\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]|$|\z)").unwrap();
+        }
+        let cap = REG.captures(log_text);
         // let loca = reg.capture_locations(log_text);
         return cap;
     }
