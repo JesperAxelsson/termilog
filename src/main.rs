@@ -143,6 +143,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     println!("Read file: {}ms", now.elapsed().as_millis());
 
+    let now = Instant::now();
     let parser = parse_log::Parser {};
     let log_lines = parser.parse_lines(&contents);
     println!(
@@ -150,6 +151,16 @@ fn main() -> Result<(), Box<dyn Error>> {
         log_lines.len(),
         now.elapsed().as_millis()
     );
+
+    let now = Instant::now();
+    let log_lines2 = parser.parse_lines2(&contents);
+    println!(
+        "Number of lines: {} in {}ms",
+        log_lines2.len(),
+        now.elapsed().as_millis()
+    );
+
+
 
     // setup terminal
     enable_raw_mode()?;
@@ -169,6 +180,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         LeaveAlternateScreen,
         DisableMouseCapture
     )?;
+    
     terminal.show_cursor()?;
 
     if let Err(err) = res {
