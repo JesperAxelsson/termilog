@@ -6,11 +6,11 @@ use std::{
     process::exit,
     time::Instant,
 };
-use tui::{
+use ratatui::{
     backend::{Backend, CrosstermBackend},
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
-    text::{Span, Spans},
+    text::{Span, Line},
     widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph, Wrap},
     Frame, Terminal,
 };
@@ -197,7 +197,7 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
     }
 }
 
-fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
+fn ui(f: &mut Frame, app: &mut App) {
     let size = f.size();
 
     // let chunks = Layout::default()
@@ -215,9 +215,9 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
         .items
         .iter()
         .map(|i| {
-            let mut lines = vec![Spans::from(&*i.date)];
+            let mut lines = vec![Line::from(&*i.date)];
             // for _ in 0..i.1 {
-            lines.push(Spans::from(Span::styled(
+            lines.push(Line::from(Span::styled(
                 i.slug(),
                 Style::default().add_modifier(Modifier::ITALIC),
             )));
