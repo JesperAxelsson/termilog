@@ -16,6 +16,7 @@ impl LogLine {
     //     }
     // }
     pub fn slug(&self) ->&str {
-        &self.text[0..10]
+        let max = usize::min(self.text.len(), 30);
+        &self.text[0..max]
     }
 }

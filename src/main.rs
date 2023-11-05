@@ -1,3 +1,11 @@
+use ratatui::{
+    backend::{Backend, CrosstermBackend},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    style::{Color, Modifier, Style},
+    text::{Line, Span},
+    widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph, Wrap},
+    Frame, Terminal,
+};
 use std::{
     env,
     error::Error,
@@ -5,14 +13,6 @@ use std::{
     io::{self, Read},
     process::exit,
     time::Instant,
-};
-use ratatui::{
-    backend::{Backend, CrosstermBackend},
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
-    text::{Span, Line},
-    widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph, Wrap},
-    Frame, Terminal,
 };
 
 use crossterm::{
@@ -79,12 +79,18 @@ impl<T> StatefulList<T> {
     }
 }
 
+pub enum SelectedBlok {
+    LogList,
+    LogText,
+}
+
 // struct App<'a> {
 struct App {
     items: StatefulList<log_line::LogLine>,
     // items: StatefulList<(&'a str, usize)>,
     // events: Vec<(&'a str, &'a str)>,
     show_popup: bool,
+
 }
 
 // impl<'a> App<'a> {
@@ -160,8 +166,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         now.elapsed().as_millis()
     );
 
-
-
     // setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -180,7 +184,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         LeaveAlternateScreen,
         DisableMouseCapture
     )?;
-    
+
     terminal.show_cursor()?;
 
     if let Err(err) = res {
@@ -198,6 +202,8 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
             match key.code {
                 KeyCode::Char('q') => return Ok(()),
                 KeyCode::Char('p') => app.show_popup = !app.show_popup,
+                // TODO: If we want to make up down work we need to save which one is selected and
+                // scroll that one
                 KeyCode::Left => app.items.unselect(),
                 KeyCode::Down => app.items.next(),
                 KeyCode::Up => app.items.previous(),
@@ -218,7 +224,7 @@ fn ui(f: &mut Frame, app: &mut App) {
 
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
+        .constraints([Constraint::Max(30), Constraint::Percentage(50)].as_ref())
         .split(f.size());
 
     // Iterate through all elements in the `items` app and append some debug text to it.
@@ -273,10 +279,19 @@ fn ui(f: &mut Frame, app: &mut App) {
     // f.render_widget(block, chunks[1]);
     // let (log_text, _) = app.items.selected_item().unwrap_or(&("default", 0));
     if let Some(log_text) = app.items.selected_item() {
-        let paragraph = Paragraph::new(Span::styled(&log_text.text, Style::default()))
+        // let lines: Vec<Line<'_>> = log_text
+        //     .text
+        //     .lines()
+        //     .map(|t| Line::from(Span::styled(t, Style::default())))
+        //     //.map(|t| Line::from(Span::styled(t, Style::default())))
+        //     .collect();
+// let lines = Line::from(&*log_text.text);
+// let lines = Line::from();
+        let paragraph = Paragraph::new(&*log_text.text)
             .block(block)
+            .scroll((0,0))
             // .alignment(Alignment::Center)
-            .wrap(Wrap { trim: true });
+            .wrap(Wrap { trim: false });
 
         f.render_widget(paragraph, chunks[1]);
     }
