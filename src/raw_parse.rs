@@ -23,7 +23,7 @@ impl RawParser {
 
                 let (got_match, offset) = self.match_date(&test_arr[i..]);
                 if got_match {
-                    println!("Push index: {offset}");
+                    // println!("Push index: {offset}");
                     list.push(i);
                 }
 
