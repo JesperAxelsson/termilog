@@ -18,12 +18,20 @@ impl RawParser {
         for i in 0..(test_arr.len() - match_date.len()) {
             let c = test_arr[i];
             if prev_newline {
+                let cc = c as char;
+                // println!("Check new char: {cc}");
+
                 let (got_match, offset) = self.match_date(&test_arr[i..]);
                 if got_match {
+                    println!("Push index: {offset}");
                     list.push(i);
                 }
+
+                prev_newline = false;
             } else {
+                let cc = c as char;
                 prev_newline = c == b'\n' || c == b'\r' || i == 0;
+                // println!("Check newline {cc} {prev_newline}");
             }
         }
 
@@ -138,5 +146,20 @@ Log line 3
             vec![0, 81]
         );
     }
+
+    #[test]
+    fn log_with_two_lines_with_date() {
+        let short_log: &str = "[2023-02-14 13:42:48] local.INFO: Incoming webhook: 7 
+     [2023-02-14 13:43:49] Log line 2
+Log line 3
+[2023-02-14 13:43:49] local.INFO: Incoming webhook: 8 ";
+
+        let p = RawParser {};
+        assert_eq!(
+            p.parse_lines(short_log),
+            vec![0, 104]
+        );
+    }
+
 }
 
