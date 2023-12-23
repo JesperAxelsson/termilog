@@ -1,3 +1,5 @@
+use crate::log_line::{LogLine2, LogData, LogLines};
+
 #[allow(unused_variables, dead_code)]
 // use regex::{Regex};
 pub struct RawParser {}
@@ -61,15 +63,92 @@ impl RawParser {
     
         return (true, ix);
     }
-}
 
+    pub fn map_log(&self, log_text:  String, log_start:  Vec<usize>) -> LogData {
+
+        let sl = [log_start.as_slice(), &[log_text.len()]].concat(); 
+
+        let log_data = LogData::new(log_text, move |txt| {
+            let mut log_lines = Vec::new();
+            let mut pix = 0;
+            let mut ix = 1;
+
+            // for i in [1..log_text.len()] {
+            while ix < sl.len()-1 {
+                let start = sl[pix] as usize;
+                let end = sl[ix];
+
+                println!("Window: {start} to {end}");
+
+                // let ll = LogLine2 {
+                //     source: &log_text[0..2],
+                // };
+
+                // log_lines.push(ll);
+                log_lines.push(&txt[start..end]);
+
+                ix+=1;
+                pix+=1;
+            }
+     
+           LogLines( log_lines)
+
+        });
+
+        // println!("Window: {:?}", sl);
+        //
+        // let mut pix = 0;
+        // let mut ix = 1;
+        //
+        // // for i in [1..log_text.len()] {
+        // while ix < sl.len()-1 {
+        //     let start = &sl[pix];
+        //     let end = &sl[ix];
+        //
+        //     println!("Window: {start} to {end}");
+        //
+        //     let ll = LogLine2 {
+        //         source: &log_text[0..2],
+        //     };
+        //
+        //     log_lines.push(ll);
+        //
+        //     ix+=1;
+        //     pix+=1;
+        // }
+        
+        // for (start, end) in [log_start.as_slice(), &[log_text.len()]].concat().iter().windows(2) {
+        //     println!("Window: {start} to {end}");
+        // }
+
+        // return log_lines;
+        return log_data;
+    }
+}
 
 
 
 #[cfg(test)]
 mod tests {
+    use crate::log_line::LogLine2;
+
     // use crate::{log_line };
     use super::RawParser;
+
+    // #[test]
+    // fn map_simple_string() {
+    //     let short_log: &str = "[2023-02-14 13:43:49]  banan ding dong";
+    //
+    //     let p = RawParser {};
+    //     let lines = p.parse_lines(&short_log);
+    //     assert_eq!(
+    //         p.map_log(short_log.to_string(), &lines),
+    //         vec![LogLine2 {
+    //             source: "[2023-02-14 13:43:49]  banan ding dong",
+    //         }]
+    //     );
+    // }
+    //
 
     #[test]
     fn match_date_starty_of_line() {

@@ -23,6 +23,7 @@ use crossterm::{
 
 mod log_line;
 mod parse_log;
+mod raw_parse;
 
 struct StatefulList<T> {
     state: ListState,
@@ -142,15 +143,37 @@ fn main() -> Result<(), Box<dyn Error>> {
     file.read_to_string(&mut contents)?;
 
     println!("Read file: {}ms", now.elapsed().as_millis());
+    let now = Instant::now();
 
-    let parser = parse_log::Parser {};
+    let parser = raw_parse::RawParser {};
     let log_lines = parser.parse_lines(&contents);
+
+    let ll = parser.map_log(contents.clone(), log_lines.clone());
+    for l in ll.borrow_dependent().0.iter() {
+        println!("Lines: {} ",  l);
+    }
+        
+
     println!(
         "Number of lines: {} in {}ms",
         log_lines.len(),
         now.elapsed().as_millis()
     );
 
+return Ok(());
+    let now = Instant::now();
+
+    let parser = parse_log::Parser {};
+    let log_lines = parser.parse_lines(&contents);
+
+    println!(
+        "Number of lines: {} in {}ms",
+        log_lines.len(),
+        now.elapsed().as_millis()
+    );
+
+
+return Ok(());
     // setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
