@@ -78,14 +78,7 @@ impl RawParser {
                 let start = sl[pix] as usize;
                 let end = sl[ix];
 
-                println!("Window: {start} to {end}");
-
-                // let ll = LogLine2 {
-                //     source: &log_text[0..2],
-                // };
-
-                // log_lines.push(ll);
-                log_lines.push(&txt[start..end]);
+                log_lines.push(LogLine2 { source: &txt[start..end] });
 
                 ix+=1;
                 pix+=1;
@@ -95,33 +88,6 @@ impl RawParser {
 
         });
 
-        // println!("Window: {:?}", sl);
-        //
-        // let mut pix = 0;
-        // let mut ix = 1;
-        //
-        // // for i in [1..log_text.len()] {
-        // while ix < sl.len()-1 {
-        //     let start = &sl[pix];
-        //     let end = &sl[ix];
-        //
-        //     println!("Window: {start} to {end}");
-        //
-        //     let ll = LogLine2 {
-        //         source: &log_text[0..2],
-        //     };
-        //
-        //     log_lines.push(ll);
-        //
-        //     ix+=1;
-        //     pix+=1;
-        // }
-        
-        // for (start, end) in [log_start.as_slice(), &[log_text.len()]].concat().iter().windows(2) {
-        //     println!("Window: {start} to {end}");
-        // }
-
-        // return log_lines;
         return log_data;
     }
 }
@@ -135,20 +101,21 @@ mod tests {
     // use crate::{log_line };
     use super::RawParser;
 
-    // #[test]
-    // fn map_simple_string() {
-    //     let short_log: &str = "[2023-02-14 13:43:49]  banan ding dong";
-    //
-    //     let p = RawParser {};
-    //     let lines = p.parse_lines(&short_log);
-    //     assert_eq!(
-    //         p.map_log(short_log.to_string(), &lines),
-    //         vec![LogLine2 {
-    //             source: "[2023-02-14 13:43:49]  banan ding dong",
-    //         }]
-    //     );
-    // }
-    //
+    #[test]
+    fn map_simple_string() {
+        let short_log: &str = "[2023-02-14 13:43:49]  banan ding dong";
+
+        let p = RawParser {};
+        let lines = p.parse_lines(&short_log);
+        let log_data = p.map_log(short_log.to_string(), lines);
+        assert_eq!(
+            log_data.borrow_dependent().0[0],
+            LogLine2 {
+                source: "[2023-02-14 13:43:49]  banan ding dong",
+            }
+        );
+    }
+
 
     #[test]
     fn match_date_starty_of_line() {

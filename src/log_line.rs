@@ -23,7 +23,7 @@ impl LogLine {
 use self_cell::self_cell;
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct LogLines<'a>(pub Vec<&'a str>);
+pub struct LogLines<'a>(pub Vec<LogLine2<'a>>);
 
 // #[derive(Debug, PartialEq, Eq, Ord, PartialOrd)]
 self_cell!(
@@ -39,12 +39,12 @@ self_cell!(
 );
 
 #[derive(Debug, PartialEq, Eq, Ord, PartialOrd)]
-pub struct LogLine2 {
-    pub source: String,
+pub struct LogLine2<'a> {
+    pub source: &'a str,
     // pub time: &str,
 }
 
-impl LogLine2 {
+impl<'a> LogLine2<'a> {
     // pub fn new() -> Self {
     //     LogLine {
     //         title: "".to_owned(),
