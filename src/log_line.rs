@@ -40,25 +40,43 @@ self_cell!(
 
 #[derive(Debug, PartialEq, Eq, Ord, PartialOrd)]
 pub struct LogLine2<'a> {
-    pub source: &'a str,
-    // pub time: &str,
+    source: &'a str,
+    log_level_len: usize,
+    slug_len: usize,
 }
 
 impl<'a> LogLine2<'a> {
-    // pub fn new() -> Self {
-    //     LogLine {
-    //         title: "".to_owned(),
-    //         source: "".to_owned(),
-    //         date: "".to_owned(),
-    //         time: "".to_owned(),
-    //     }
-    // }
+
+    pub fn parse(source: &'a str) -> Self {
+        let ls = &source[22..].as_bytes();
+
+        let mut lg_len: usize = 0;
+        while let Some(c) = ls.get(lg_len) {
+            lg_len+=1;
+            if *c == b' ' {
+                break;
+            }
+        }
+
+
+        LogLine2  {
+            source,
+            log_level_len: 11,
+            slug_len: 10,
+        }
+    }
+
     pub fn slug(&self) ->&str {
-        &self.source[22..]
+        let ix = 22+self.log_level_len + 1;
+        let end = usize::min(self.source.len(), ix+self.slug_len);
+        &self.source[ix..end]
     }
 
     pub fn date(&self) ->&str {
         &self.source[0..21]
     }
 
+    pub fn log_level(&self) ->&str {
+        &self.source[22..22+self.log_level_len]
+    }
 }

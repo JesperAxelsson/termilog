@@ -73,12 +73,11 @@ impl RawParser {
             let mut pix = 0;
             let mut ix = 1;
 
-            // for i in [1..log_text.len()] {
-            while ix < sl.len()-1 {
+            while ix < sl.len() {
                 let start = sl[pix] as usize;
                 let end = sl[ix];
 
-                log_lines.push(LogLine2 { source: &txt[start..end] });
+                log_lines.push(LogLine2::parse(&txt[start..end]));
 
                 ix+=1;
                 pix+=1;
@@ -102,6 +101,31 @@ mod tests {
     use super::RawParser;
 
     #[test]
+    fn map_correct_slug_and_date() {
+        let short_log: &str = "[2023-02-14 13:43:49] local.DEBUG banan ding dong";
+
+        let p = RawParser {};
+        let lines = p.parse_lines(&short_log);
+        let log_data = p.map_log(short_log.to_string(), lines);
+            // LogLine2::parse("[2023-02-14 13:43:49]  banan ding dong")
+        assert_eq!(
+            log_data.borrow_dependent().0[0].date(),
+           "[2023-02-14 13:43:49]"
+        );
+
+        assert_eq!(
+            log_data.borrow_dependent().0[0].slug(),
+           "banan ding"
+        );
+
+        assert_eq!(
+            log_data.borrow_dependent().0[0].log_level(),
+           "local.DEBUG"
+        );
+    }
+
+
+    #[test]
     fn map_simple_string() {
         let short_log: &str = "[2023-02-14 13:43:49]  banan ding dong";
 
@@ -110,9 +134,7 @@ mod tests {
         let log_data = p.map_log(short_log.to_string(), lines);
         assert_eq!(
             log_data.borrow_dependent().0[0],
-            LogLine2 {
-                source: "[2023-02-14 13:43:49]  banan ding dong",
-            }
+            LogLine2::parse("[2023-02-14 13:43:49]  banan ding dong")
         );
     }
 
