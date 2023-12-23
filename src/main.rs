@@ -24,7 +24,7 @@ use crossterm::{
 use log_line::{ LogData, LogLine2 };
 
 mod log_line;
-mod parse_log;
+// mod parse_log;
 mod raw_parse;
 
 // use std::ops::Index;
@@ -244,7 +244,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
         
         .iter()
         .map(|i| {
-            let mut lines = vec![Spans::from(&*i.date())];
+            let mut lines = vec![Spans::from(&*i.info())];
             // for _ in 0..i.1 {
             lines.push(Spans::from(Span::styled(
                 i.slug(),
@@ -290,7 +290,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
     // f.render_widget(block, chunks[1]);
     // let (log_text, _) = app.items.selected_item().unwrap_or(&("default", 0));
     if let Some(log_text) = app.list_items.selected_item() {
-        let paragraph = Paragraph::new(Span::styled(log_text.slug(), Style::default()))
+        let paragraph = Paragraph::new(Span::styled(log_text.text(), Style::default()))
             .block(block)
             // .alignment(Alignment::Center)
             .wrap(Wrap { trim: true });

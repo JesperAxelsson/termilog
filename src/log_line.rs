@@ -52,24 +52,34 @@ impl<'a> LogLine2<'a> {
 
         let mut lg_len: usize = 0;
         while let Some(c) = ls.get(lg_len) {
-            lg_len+=1;
-            if *c == b' ' {
+            if *c == b':' {
                 break;
             }
-        }
 
+            lg_len+=1;
+        }
 
         LogLine2  {
             source,
-            log_level_len: 11,
+            log_level_len: lg_len,
             slug_len: 10,
         }
     }
 
+    pub fn text(&self) ->&str {
+        let ix = 22+self.log_level_len + 2;
+        &self.source[ix..]
+    }
+
     pub fn slug(&self) ->&str {
-        let ix = 22+self.log_level_len + 1;
+        let ix = 22+self.log_level_len + 2;
         let end = usize::min(self.source.len(), ix+self.slug_len);
         &self.source[ix..end]
+    }
+
+    pub fn info(&self) ->&str {
+        let ix = 22+self.log_level_len + 2;
+        &self.source[0..ix]
     }
 
     pub fn date(&self) ->&str {

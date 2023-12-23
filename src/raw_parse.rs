@@ -101,8 +101,89 @@ mod tests {
     use super::RawParser;
 
     #[test]
+    fn map_correct_slug_and_date_many_lines() {
+        let short_log: &str = "[2023-02-14 13:42:48] local.INFO: Incoming webhook: 7 
+[2023-02-14 13:43:49] local.DEBUG: Incoming webhook: 8 
+[2023-02-14 13:43:50] local.ERROR: Incoming webhook: 9 ";
+
+
+        let p = RawParser {};
+        let lines = p.parse_lines(&short_log);
+        let log_data = p.map_log(short_log.to_string(), lines);
+        
+        // First
+        assert_eq!(
+            log_data.borrow_dependent().0[0].date(),
+           "[2023-02-14 13:42:48]"
+        );
+
+        assert_eq!(
+            log_data.borrow_dependent().0[0].log_level(),
+           "local.INFO"
+        );
+
+         assert_eq!(
+            log_data.borrow_dependent().0[0].text(),
+           "Incoming webhook: 7 
+"
+        );
+
+        assert_eq!(
+            log_data.borrow_dependent().0[0].slug(),
+           "Incoming w"
+        );
+
+
+        // Second
+        assert_eq!(
+            log_data.borrow_dependent().0[1].date(),
+           "[2023-02-14 13:43:49]"
+        );
+
+        assert_eq!(
+            log_data.borrow_dependent().0[1].text(),
+            "Incoming webhook: 8 
+"
+        );
+
+        assert_eq!(
+            log_data.borrow_dependent().0[1].slug(),
+            "Incoming w"
+        );
+
+        assert_eq!(
+            log_data.borrow_dependent().0[1].log_level(),
+           "local.DEBUG"
+        );
+       
+        // Third
+        assert_eq!(
+            log_data.borrow_dependent().0[2].date(),
+           "[2023-02-14 13:43:50]"
+        );
+
+        assert_eq!(
+            log_data.borrow_dependent().0[2].text(),
+ "Incoming webhook: 9 "
+        );
+
+        assert_eq!(
+            log_data.borrow_dependent().0[2].slug(),
+ "Incoming w"
+        );
+
+        assert_eq!(
+            log_data.borrow_dependent().0[2].log_level(),
+           "local.ERROR"
+        );
+
+    }
+
+
+
+    #[test]
     fn map_correct_slug_and_date() {
-        let short_log: &str = "[2023-02-14 13:43:49] local.DEBUG banan ding dong";
+        let short_log: &str = "[2023-02-14 13:43:49] local.DEBUG: banan ding dong";
 
         let p = RawParser {};
         let lines = p.parse_lines(&short_log);
@@ -127,21 +208,21 @@ mod tests {
 
     #[test]
     fn map_simple_string() {
-        let short_log: &str = "[2023-02-14 13:43:49]  banan ding dong";
+        let short_log: &str = "[2023-02-14 13:43:49] apple: banan ding dong";
 
         let p = RawParser {};
         let lines = p.parse_lines(&short_log);
         let log_data = p.map_log(short_log.to_string(), lines);
         assert_eq!(
             log_data.borrow_dependent().0[0],
-            LogLine2::parse("[2023-02-14 13:43:49]  banan ding dong")
+            LogLine2::parse("[2023-02-14 13:43:49] apple: banan ding dong")
         );
     }
 
 
     #[test]
     fn match_date_starty_of_line() {
-        let short_log: &str = "[2023-02-14 13:43:49]  banan ding dong";
+        let short_log: &str = "[2023-02-14 13:43:49] apple: banan ding dong";
 
         let p = RawParser {};
         assert_eq!(
@@ -152,7 +233,7 @@ mod tests {
 
     #[test]
     fn match_date_middle_of_line_no_match() {
-        let short_log: &str = "asbc[2023-02-14 13:43:49]  banan ding dong";
+        let short_log: &str = "asbc[2023-02-14 13:43:49] apple: banan ding dong";
 
         let p = RawParser {};
         assert_eq!(
@@ -164,7 +245,7 @@ mod tests {
     #[test]
     fn match_date_middle_of_line_match() {
         let short_log: &str = "
-[2023-02-14 13:43:49]  banan ding dong";
+[2023-02-14 13:43:49] apple: banan ding dong";
 
         let p = RawParser {};
         assert_eq!(
@@ -177,7 +258,7 @@ mod tests {
 
     #[test]
     fn exploration_line() {
-        let short_log: &str = "[2023-02-14 13:43:49]  banan ding dong";
+        let short_log: &str = "[2023-02-14 13:43:49] apple: banan ding dong";
 
         let p = RawParser {};
         assert_eq!(
@@ -218,14 +299,14 @@ Log line 3
     #[test]
     fn log_with_two_lines_with_date() {
         let short_log: &str = "[2023-02-14 13:42:48] local.INFO: Incoming webhook: 7 
-     [2023-02-14 13:43:49] Log line 2
+     [2023-02-14 13:43:49] local.DEBUG: Log line 2
 Log line 3
 [2023-02-14 13:43:49] local.INFO: Incoming webhook: 8 ";
 
         let p = RawParser {};
         assert_eq!(
             p.parse_lines(short_log),
-            vec![0, 104]
+            vec![0, 117]
         );
     }
 
