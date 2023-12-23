@@ -1,3 +1,4 @@
+#[allow(dead_code)] 
 use regex::{Captures, Regex};
 
 use crate::log_line;
@@ -34,6 +35,7 @@ impl Parser {
     //     );
     // }
 
+    #[allow(dead_code)] 
     pub fn parse_line_test(&self, log_text: &str) -> (String, String, String, String) {
         let cap = self
             .parse_line_caps(log_text)
