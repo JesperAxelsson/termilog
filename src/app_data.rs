@@ -1,25 +1,15 @@
-use std::{
-    env,
-    error::Error,
-    fs::{metadata, File},
-    io::{self, Read},
-    process::exit,
-    time::Instant,
-};
+use std::io;
 use ratatui::{
-    backend::{Backend, CrosstermBackend},
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    backend::Backend,
+    layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Span, Line},
     widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph, Wrap},
     Frame, Terminal,
 };
 
-use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
-    execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-};
+use crossterm::event::{Event, KeyCode};
+use crossterm::event;
 
 use crate::log_line::LogLine2;
 use crate::log_line::LogData;

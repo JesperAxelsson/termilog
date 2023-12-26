@@ -6,22 +6,15 @@ use std::{
     process::exit,
     time::Instant,
 };
-use ratatui::{
-    backend::{Backend, CrosstermBackend},
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
-    text::{Span, Line},
-    widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph, Wrap},
-    Frame, Terminal,
-};
+use ratatui::Terminal;
+use ratatui::prelude::CrosstermBackend;
 
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
+    event::{DisableMouseCapture, EnableMouseCapture},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 
-use log_line::{ LogData, LogLine2 };
 use app_data::App;
 
 
