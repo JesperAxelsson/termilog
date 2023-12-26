@@ -81,7 +81,7 @@ impl App {
                 let mut lines = vec![Line::from(&*i.info())];
                 // for _ in 0..i.1 {
                 lines.push(Line::from(Span::styled(
-                    i.slug(),
+                    i.slug(30),
                     Style::default().add_modifier(Modifier::ITALIC),
                 )));
                 // }

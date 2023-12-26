@@ -20,7 +20,6 @@ self_cell!(
 pub struct LogLine<'a> {
     source: &'a str,
     log_level_len: usize,
-    slug_len: usize,
 }
 
 impl<'a> LogLine<'a> {
@@ -40,7 +39,6 @@ impl<'a> LogLine<'a> {
         LogLine {
             source,
             log_level_len: lg_len,
-            slug_len: 10,
         }
     }
 
@@ -49,9 +47,9 @@ impl<'a> LogLine<'a> {
         &self.source[ix..]
     }
 
-    pub fn slug(&self) ->&str {
+    pub fn slug(&self, slug_len: usize) ->&str {
         let ix = 22+self.log_level_len + 2;
-        let end = usize::min(self.source.len(), ix+self.slug_len);
+        let end = usize::min(self.source.len(), ix+slug_len);
         &self.source[ix..end]
     }
 
