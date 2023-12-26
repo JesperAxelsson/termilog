@@ -11,7 +11,7 @@ use ratatui::{
 use crossterm::event::{Event, KeyCode};
 use crossterm::event;
 
-use crate::log_line::LogLine2;
+use crate::log_line::LogLine;
 use crate::log_line::LogData;
 use crate::ui;
 
@@ -190,7 +190,7 @@ impl StatefulList {
         self.state.select(None);
     }
 
-    fn selected_item(&mut self) -> Option<&LogLine2> {
+    fn selected_item(&mut self) -> Option<&LogLine> {
         let ix = self.state.selected();
         if let Some(ix) = ix {
             return Some(&self.items.borrow_dependent().0[ix]);

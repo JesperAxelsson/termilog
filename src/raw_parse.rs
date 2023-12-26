@@ -1,4 +1,4 @@
-use crate::log_line::{LogLine2, LogData, LogLines};
+use crate::log_line::{LogLine, LogData, LogLines};
 
 #[allow(unused_variables, dead_code)]
 // use regex::{Regex};
@@ -77,7 +77,7 @@ impl RawParser {
                 let start = sl[pix] as usize;
                 let end = sl[ix];
 
-                log_lines.push(LogLine2::parse(&txt[start..end]));
+                log_lines.push(LogLine::parse(&txt[start..end]));
 
                 ix+=1;
                 pix+=1;
@@ -95,7 +95,7 @@ impl RawParser {
 
 #[cfg(test)]
 mod tests {
-    use crate::log_line::LogLine2;
+    use crate::log_line::LogLine;
 
     // use crate::{log_line };
     use super::RawParser;
@@ -188,7 +188,7 @@ mod tests {
         let p = RawParser {};
         let lines = p.parse_lines(&short_log);
         let log_data = p.map_log(short_log.to_string(), lines);
-            // LogLine2::parse("[2023-02-14 13:43:49]  banan ding dong")
+            // LogLine::parse("[2023-02-14 13:43:49]  banan ding dong")
         assert_eq!(
             log_data.borrow_dependent().0[0].date(),
            "[2023-02-14 13:43:49]"
@@ -215,7 +215,7 @@ mod tests {
         let log_data = p.map_log(short_log.to_string(), lines);
         assert_eq!(
             log_data.borrow_dependent().0[0],
-            LogLine2::parse("[2023-02-14 13:43:49] apple: banan ding dong")
+            LogLine::parse("[2023-02-14 13:43:49] apple: banan ding dong")
         );
     }
 

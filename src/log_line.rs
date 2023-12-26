@@ -1,7 +1,7 @@
 use self_cell::self_cell;
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct LogLines<'a>(pub Vec<LogLine2<'a>>);
+pub struct LogLines<'a>(pub Vec<LogLine<'a>>);
 
 // #[derive(Debug, PartialEq, Eq, Ord, PartialOrd)]
 self_cell!(
@@ -17,13 +17,13 @@ self_cell!(
 );
 
 #[derive(Debug, PartialEq, Eq, Ord, PartialOrd)]
-pub struct LogLine2<'a> {
+pub struct LogLine<'a> {
     source: &'a str,
     log_level_len: usize,
     slug_len: usize,
 }
 
-impl<'a> LogLine2<'a> {
+impl<'a> LogLine<'a> {
 
     pub fn parse(source: &'a str) -> Self {
         let ls = &source[22..].as_bytes();
@@ -37,7 +37,7 @@ impl<'a> LogLine2<'a> {
             lg_len+=1;
         }
 
-        LogLine2  {
+        LogLine {
             source,
             log_level_len: lg_len,
             slug_len: 10,
@@ -60,10 +60,12 @@ impl<'a> LogLine2<'a> {
         &self.source[0..ix]
     }
 
+    #[allow(dead_code)]
     pub fn date(&self) ->&str {
         &self.source[0..21]
     }
 
+    #[allow(dead_code)]
     pub fn log_level(&self) ->&str {
         &self.source[22..22+self.log_level_len]
     }
