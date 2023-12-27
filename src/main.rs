@@ -6,122 +6,24 @@ use std::{
     process::exit,
     time::Instant,
 };
-use tui::{
-    backend::{Backend, CrosstermBackend},
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
-    text::{Span, Spans},
-    widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph, Wrap},
-    Frame, Terminal,
-};
+use ratatui::Terminal;
+use ratatui::prelude::CrosstermBackend;
 
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
+    event::{DisableMouseCapture, EnableMouseCapture},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 
-use log_line::{ LogData, LogLine2 };
+use app_data::App;
+
 
 mod log_line;
 // mod parse_log;
 mod raw_parse;
+mod ui;
+mod app_data;
 
-// use std::ops::Index;
-struct StatefulList {
-    state: ListState,
-    items: LogData,
-}
-
-impl StatefulList {
-    fn with_items(items: LogData) -> StatefulList {
-        StatefulList {
-            state: ListState::default(),
-            items,
-        }
-    }
-
-    fn next(&mut self) {
-        let i = match self.state.selected() {
-            Some(i) => {
-                if i >= self.items.borrow_dependent().0.len() - 1 {
-                    0
-                } else {
-                    i + 1
-                }
-            }
-            None => 0,
-        };
-        self.state.select(Some(i));
-    }
-
-    fn previous(&mut self) {
-        let i = match self.state.selected() {
-            Some(i) => {
-                if i == 0 {
-                    self.items.borrow_dependent().0.len() - 1
-                } else {
-                    i - 1
-                }
-            }
-            None => 0,
-        };
-        self.state.select(Some(i));
-    }
-
-    fn unselect(&mut self) {
-        self.state.select(None);
-    }
-
-    fn selected_item(&mut self) -> Option<&LogLine2> {
-        let ix = self.state.selected();
-        if let Some(ix) = ix {
-            return Some(&self.items.borrow_dependent().0[ix]);
-        }
-
-        return None;
-    }
-}
-
-// struct App<'a> {
-struct App {
-    list_items: StatefulList,
-    // items: StatefulList<(&'a str, usize)>,
-    // events: Vec<(&'a str, &'a str)>,
-    show_popup: bool,
-}
-
-// impl<'a> App<'a> {
-impl App {
-    // fn new() -> App<'a> {
-    //     App {
-    //         items: StatefulList::with_items(vec![
-    //             ("Item0", 1),
-    //             ("Item1", 2),
-    //             ("Item2", 1),
-    //             ("Item3", 3),
-    //             ("Item4", 1),
-    //             ("Item5", 4),
-    //             ("Item6", 1),
-    //         ]),
-    //         show_popup: false,
-    //     }
-    // }
-
-    // fn new(log_lines: Vec<log_line::LogLine>) -> App<'a> {
-    fn new(log_data: LogData) -> App {
-        App {
-            list_items: StatefulList::with_items(log_data),
-            show_popup: false,
-        }
-    }
-
-    // Use this to read file?
-    //    fn on_tick(&mut self) {
-    //     // let event = self.events.remove(0);
-    //     // self.events.push(event);
-    // }
-}
 
 fn main() -> Result<(), Box<dyn Error>> {
     let now = Instant::now();
@@ -188,7 +90,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // create app and run it
     let app = App::new(ll);
-    let res = run_app(&mut terminal, app);
+    let res = app.run_app(&mut terminal);
 
     // restore terminal
     disable_raw_mode()?;
@@ -206,130 +108,3 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
-    loop {
-        terminal.draw(|f| ui(f, &mut app))?;
-
-        if let Event::Key(key) = event::read()? {
-            match key.code {
-                KeyCode::Char('q') => return Ok(()),
-                KeyCode::Char('p') => app.show_popup = !app.show_popup,
-                KeyCode::Left => app.list_items.unselect(),
-                KeyCode::Down => app.list_items.next(),
-                KeyCode::Up => app.list_items.previous(),
-                _ => {}
-            }
-        }
-
-        // TODO: Handle notify events here
-    }
-}
-
-fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
-    let size = f.size();
-
-    // let chunks = Layout::default()
-    //     .constraints([Constraint::Percentage(20), Constraint::Percentage(80)].as_ref())
-    //     .split(size);
-
-    let chunks = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
-        .split(f.size());
-
-    // Iterate through all elements in the `items` app and append some debug text to it.
-    let items: Vec<ListItem> = app
-        .list_items
-        .items.borrow_dependent().0
-        
-        .iter()
-        .map(|i| {
-            let mut lines = vec![Spans::from(&*i.info())];
-            // for _ in 0..i.1 {
-            lines.push(Spans::from(Span::styled(
-                i.slug(),
-                Style::default().add_modifier(Modifier::ITALIC),
-            )));
-            // }
-            ListItem::new(lines).style(Style::default().fg(Color::Black).bg(Color::White))
-        })
-        .collect();
-
-    // Create a List from all list items and highlight the currently selected one
-    let items = List::new(items)
-        .block(Block::default().borders(Borders::ALL).title("List"))
-        .highlight_style(
-            Style::default()
-                .bg(Color::LightGreen)
-                .add_modifier(Modifier::BOLD),
-        )
-        .highlight_symbol(">> ");
-
-    // We can now render the item list
-    f.render_stateful_widget(items, chunks[0], &mut app.list_items.state);
-
-    let text = if app.show_popup {
-        "Press p to close the popup"
-    } else {
-        "Press p to show the popup"
-    };
-    let paragraph = Paragraph::new(Span::styled(
-        text,
-        Style::default().add_modifier(Modifier::SLOW_BLINK),
-    ))
-    .alignment(Alignment::Center)
-    .wrap(Wrap { trim: true });
-
-    f.render_widget(paragraph, chunks[0]);
-
-    let block = Block::default()
-        .title("Content")
-        .borders(Borders::ALL)
-        .style(Style::default().bg(Color::Blue));
-
-    // f.render_widget(block, chunks[1]);
-    // let (log_text, _) = app.items.selected_item().unwrap_or(&("default", 0));
-    if let Some(log_text) = app.list_items.selected_item() {
-        let paragraph = Paragraph::new(Span::styled(log_text.text(), Style::default()))
-            .block(block)
-            // .alignment(Alignment::Center)
-            .wrap(Wrap { trim: true });
-
-        f.render_widget(paragraph, chunks[1]);
-    }
-
-    // Render popup
-    if app.show_popup {
-        let block = Block::default().title("Popup").borders(Borders::ALL);
-        let area = centered_rect(60, 20, size);
-        f.render_widget(Clear, area); //this clears out the background
-        f.render_widget(block, area);
-    }
-}
-
-/// helper function to create a centered rect using up certain percentage of the available rect `r`
-fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
-    let popup_layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints(
-            [
-                Constraint::Percentage((100 - percent_y) / 2),
-                Constraint::Percentage(percent_y),
-                Constraint::Percentage((100 - percent_y) / 2),
-            ]
-            .as_ref(),
-        )
-        .split(r);
-
-    Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints(
-            [
-                Constraint::Percentage((100 - percent_x) / 2),
-                Constraint::Percentage(percent_x),
-                Constraint::Percentage((100 - percent_x) / 2),
-            ]
-            .as_ref(),
-        )
-        .split(popup_layout[1])[1]
-}
