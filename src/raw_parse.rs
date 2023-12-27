@@ -129,7 +129,7 @@ mod tests {
         );
 
         assert_eq!(
-            log_data.borrow_dependent().0[0].slug(),
+            log_data.borrow_dependent().0[0].slug(10),
            "Incoming w"
         );
 
@@ -147,7 +147,7 @@ mod tests {
         );
 
         assert_eq!(
-            log_data.borrow_dependent().0[1].slug(),
+            log_data.borrow_dependent().0[1].slug(10),
             "Incoming w"
         );
 
@@ -168,7 +168,7 @@ mod tests {
         );
 
         assert_eq!(
-            log_data.borrow_dependent().0[2].slug(),
+            log_data.borrow_dependent().0[2].slug(10),
  "Incoming w"
         );
 
@@ -195,7 +195,7 @@ mod tests {
         );
 
         assert_eq!(
-            log_data.borrow_dependent().0[0].slug(),
+            log_data.borrow_dependent().0[0].slug(10),
            "banan ding"
         );
 
