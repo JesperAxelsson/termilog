@@ -12,7 +12,7 @@ use ratatui::Terminal;
 use ratatui::prelude::CrosstermBackend;
 
 use crossterm::{
-    event::{DisableMouseCapture, EnableMouseCapture},
+    // event::{DisableMouseCapture, EnableMouseCapture},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -30,7 +30,8 @@ mod app_data;
 
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let _ = simple_logging::log_to_file("test.log", LevelFilter::Trace);
+    let _ = simple_logging::log_to_file("test.log", LevelFilter::Error);
+    // let _ = simple_logging::log_to_file("test.log", LevelFilter::Trace);
     info!("Starting up!");
 
     let now = Instant::now();

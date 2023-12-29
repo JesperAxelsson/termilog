@@ -65,13 +65,13 @@ impl RawParser {
 
         let sl = [log_start.as_slice(), &[log_text.len()]].concat(); 
 
-        let log_data = LogData::new(log_text, move |txt| {
+        LogData::new(log_text, move |txt| {
             let mut log_lines = Vec::new();
             let mut pix = 0;
             let mut ix = 1;
 
             while ix < sl.len() {
-                let start = sl[pix] as usize;
+                let start = sl[pix];
                 let end = sl[ix];
 
                 log_lines.push(LogLine::parse(&txt[start..end]));
@@ -82,9 +82,7 @@ impl RawParser {
      
            LogLines(log_lines)
 
-        });
-
-        return log_data;
+        })
     }
 }
 

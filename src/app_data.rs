@@ -20,7 +20,7 @@ use crossterm::event;
 
 use crate::log_line::LogLine;
 use crate::log_line::LogData;
-use crate::{ui, raw_parse};
+use crate::ui;
 
 #[derive(Debug)]
 pub struct FileInfo {
@@ -128,7 +128,7 @@ impl App {
             
             .iter()
             .map(|i| {
-                let mut lines = vec![Line::from(&*i.info())];
+                let mut lines = vec![Line::from(i.info())];
                 // for _ in 0..i.1 {
                 lines.push(Line::from(Span::styled(
                     i.slug(30),
@@ -260,7 +260,7 @@ impl StatefulList {
             return Some(&self.items.log_lines()[ix]);
         }
 
-        return None;
+        None
     }
 }
 
