@@ -1,5 +1,8 @@
 use crate::log_line::{LogLine, LogData, LogLines};
 
+
+const LARAVEL_DATE: &[u8; 22] =  b"[dddd-dd-dd dd:dd:dd] ";
+
 #[allow(unused_variables, dead_code)]
 // use regex::{Regex};
 pub struct RawParser {}
@@ -9,15 +12,10 @@ impl RawParser {
     #[allow(unused_variables, dead_code)]
     pub fn parse_lines(&self, log_text: &str) -> Vec<usize> {
         let mut list = Vec::new();
-        // let foo = log_text.as_bytes();
         let mut prev_newline = true;
-        let match_date = b"[dddd-dd-dd dd:dd:dd] ";
-        // let mut match_iter = match_date.iter();
-        // let mut starting_real_ix = 0;
-        //
 
         let test_arr = log_text.as_bytes();
-        for i in 0..(test_arr.len() - match_date.len()) {
+        for i in 0..(test_arr.len() - LARAVEL_DATE.len()) {
             let c = test_arr[i];
             if prev_newline {
                 let cc = c as char;
@@ -40,10 +38,9 @@ impl RawParser {
         return list;        
     }
 
-    pub fn match_date(&self, text: &[u8]) -> (bool, usize) {
+    fn match_date(&self, text: &[u8]) -> (bool, usize) {
         let mut ix = 0;
-        let match_date = b"[dddd-dd-dd dd:dd:dd] ";
-        let mut match_iter = match_date.iter();
+        let mut match_iter = LARAVEL_DATE.iter();
 
         while let Some(mc) = match_iter.next() {
             let c = text[ix];
@@ -64,7 +61,7 @@ impl RawParser {
         return (true, ix);
     }
 
-    pub fn map_log(&self, log_text:  String, log_start:  Vec<usize>) -> LogData {
+    pub fn map_log(&self, log_text: String, log_start: Vec<usize>) -> LogData {
 
         let sl = [log_start.as_slice(), &[log_text.len()]].concat(); 
 
@@ -83,7 +80,7 @@ impl RawParser {
                 pix+=1;
             }
      
-           LogLines( log_lines)
+           LogLines(log_lines)
 
         });
 

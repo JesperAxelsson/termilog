@@ -1,5 +1,7 @@
 use self_cell::self_cell;
 
+use crate::raw_parse;
+
 #[derive(Debug, Eq, PartialEq)]
 pub struct LogLines<'a>(pub Vec<LogLine<'a>>);
 
@@ -15,6 +17,39 @@ self_cell!(
 
     impl {Debug, Eq, PartialEq}
 );
+
+impl LogData {
+    pub fn empty() -> Self {
+        LogData::new(String::new(), |_| { LogLines(Vec::new()) }) 
+    }
+
+     pub fn from_content(new_text: String) -> Self {
+        let parser = raw_parse::RawParser {};
+        let log_lines = parser.parse_lines(&new_text);
+
+        let ll = parser.map_log(new_text, log_lines.clone());
+        ll
+    }
+
+   pub fn append_text(self, new_text: &str) -> Self {
+        let mut owner = self.into_owner();
+        owner.push_str(new_text);
+
+        let parser = raw_parse::RawParser {};
+        let log_lines = parser.parse_lines(&owner);
+
+        let ll = parser.map_log(owner, log_lines.clone());
+        ll
+    }
+
+    pub fn len(&self) -> usize {
+        self.log_lines().len()
+    }
+
+    pub fn log_lines(&self) -> &Vec<LogLine> {
+        &self.borrow_dependent().0
+    }
+}
 
 #[derive(Debug, PartialEq, Eq, Ord, PartialOrd)]
 pub struct LogLine<'a> {

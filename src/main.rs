@@ -1,3 +1,5 @@
+use log::info;
+use log::LevelFilter;
 use std::{
     env,
     error::Error,
@@ -17,6 +19,8 @@ use crossterm::{
 
 use app_data::App;
 
+use crate::app_data::FileInfo;
+
 
 mod log_line;
 // mod parse_log;
@@ -26,6 +30,9 @@ mod app_data;
 
 
 fn main() -> Result<(), Box<dyn Error>> {
+    let _ = simple_logging::log_to_file("test.log", LevelFilter::Trace);
+    info!("Starting up!");
+
     let now = Instant::now();
 
     let args: Vec<String> = env::args().collect();
@@ -43,7 +50,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         exit(-1);
     }
 
-    let mut file = File::open(log_path)?;
+    let file_size = meta.len();
+
+    let mut file = File::open(&log_path)?;
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
 
@@ -54,42 +63,29 @@ fn main() -> Result<(), Box<dyn Error>> {
     let log_lines = parser.parse_lines(&contents);
 
     let ll = parser.map_log(contents.clone(), log_lines.clone());
-    // for l in ll.borrow_dependent().0.iter() {
-    //     println!("Date: {:?} ",  l.date());
-    //     println!("Lines: {:?} ",  l.source);
-    // }
-        
 
     println!(
         "Number of lines: {} in {}ms",
         log_lines.len(),
         now.elapsed().as_millis()
     );
-
-    // let now = Instant::now();
-//
-//     let parser = parse_log::Parser {};
-//     let log_lines = parser.parse_lines(&contents);
-//
-//     println!(
-//         "Number of lines: {} in {}ms",
-//         log_lines.len(),
-//         now.elapsed().as_millis()
-//     );
-//
-//
-// return Ok(());
-    
    
     // setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    execute!(stdout, EnterAlternateScreen
+    // , EnableMouseCapture
+)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
     // create app and run it
-    let app = App::new(ll);
+    let app = App::new(
+        FileInfo {
+            name: log_path,
+            size: file_size,
+        },
+        ll);
     let res = app.run_app(&mut terminal);
 
     // restore terminal
@@ -97,7 +93,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     execute!(
         terminal.backend_mut(),
         LeaveAlternateScreen,
-        DisableMouseCapture
+        // DisableMouseCapture
     )?;
     terminal.show_cursor()?;
 

@@ -1,4 +1,11 @@
-use std::io;
+use std::{cmp, mem};
+use std::io::{Seek, SeekFrom};
+use std::{io, time::Duration, fs::metadata};
+use std::{
+    fs::File,
+    io::Read,
+};
+use log::trace;
 use ratatui::{
     backend::Backend,
     layout::{Alignment, Constraint, Direction, Layout},
@@ -13,10 +20,17 @@ use crossterm::event;
 
 use crate::log_line::LogLine;
 use crate::log_line::LogData;
-use crate::ui;
+use crate::{ui, raw_parse};
+
+#[derive(Debug)]
+pub struct FileInfo {
+    pub name: String,
+    pub size: u64,
+}
 
 // struct App<'a> {
 pub struct App {
+    file: FileInfo,
     list_items: StatefulList,
     // items: StatefulList<(&'a str, usize)>,
     // events: Vec<(&'a str, &'a str)>,
@@ -25,37 +39,73 @@ pub struct App {
 
 // impl<'a> App<'a> {
 impl App {
-    pub fn new(log_data: LogData) -> App {
+    pub fn new(file: FileInfo, log_data: LogData) -> App {
         App {
+            file,
             list_items: StatefulList::with_items(log_data),
             show_popup: false,
         }
     }
 
-    // Use this to read file?
-    //    fn on_tick(&mut self) {
-    //     // let event = self.events.remove(0);
-    //     // self.events.push(event);
-    // }
-
-
-
     pub fn run_app<B: Backend>(mut self, terminal: &mut Terminal<B>) -> io::Result<()> {
         loop {
             terminal.draw(|f| self.ui(f))?;
 
-            if let Event::Key(key) = event::read()? {
-                match key.code {
-                    KeyCode::Char('q') => return Ok(()),
-                    KeyCode::Char('p') => self.show_popup = !self.show_popup,
-                    KeyCode::Left => self.list_items.unselect(),
-                    KeyCode::Down => self.list_items.next(),
-                    KeyCode::Up => self.list_items.previous(),
-                    _ => {}
+            if event::poll(Duration::from_millis(1000))? {
+                if let Event::Key(key) = event::read()? {
+                    match key.code {
+                        KeyCode::Char('q') => return Ok(()),
+                        KeyCode::Char('p') => self.show_popup = !self.show_popup,
+                        KeyCode::Left => self.list_items.unselect(),
+                        KeyCode::Down => self.list_items.next(),
+                        KeyCode::Up => self.list_items.previous(),
+                        _ => {}
+                    }
                 }
             }
 
             // TODO: Handle notify events here
+            if let Ok(meta) = metadata(&self.file.name) {
+                if self.file.size != meta.len() {
+
+                    let mut file = File::open(&self.file.name)?;
+
+                    if self.file.size < meta.len() {
+                        file.seek(SeekFrom::Start(self.file.size)).unwrap();
+                    }
+
+                    let mut contents = String::new();
+                    file.read_to_string(&mut contents)?;
+
+
+                    if self.file.size < meta.len() {
+                        trace!("File size increased {:?}", contents);
+                        self.list_items.append_text(&contents);
+                    } else {
+                        trace!("File size reduced {:?} to {:?}", self.file.size, meta.len());
+                        let ll = LogData::from_content(contents);
+                        self.list_items.change_log_data(ll);
+                    }
+
+
+                    // let parser = raw_parse::RawParser {};
+                    // let log_lines = parser.parse_lines(&contents);
+                    //
+                    // let ll = parser.map_log(contents.clone(), log_lines.clone());
+
+                    // self.list_items.change_log_data(ll);
+
+
+                    self.file.size = meta.len();
+
+                } else {
+                    trace!("No file changed");
+                }
+            } else {
+                trace!("File gone!");
+            }
+
+            trace!("Loop!");
         }
     }
 
@@ -151,17 +201,31 @@ struct StatefulList {
 }
 
 impl StatefulList {
-    fn with_items(items: LogData) -> StatefulList {
+
+    pub fn with_items(items: LogData) -> StatefulList {
         StatefulList {
             state: ListState::default(),
             items,
         }
     }
 
+    pub fn change_log_data(&mut self, log_data: LogData) {
+        let data_len = log_data.len();
+        self.items = log_data;
+        if let Some(state) = self.state.selected() {
+            *self.state.selected_mut() = Some(cmp::min(state, data_len));
+        }
+    }
+
+    pub fn append_text(&mut self, content: &str) {
+        let items = mem::replace(&mut self.items, LogData::empty());
+        self.items = items.append_text(content);
+    }
+
     fn next(&mut self) {
         let i = match self.state.selected() {
             Some(i) => {
-                if i >= self.items.borrow_dependent().0.len() - 1 {
+                if i >= self.items.len() - 1 {
                     0
                 } else {
                     i + 1
@@ -176,7 +240,7 @@ impl StatefulList {
         let i = match self.state.selected() {
             Some(i) => {
                 if i == 0 {
-                    self.items.borrow_dependent().0.len() - 1
+                    self.items.len() - 1
                 } else {
                     i - 1
                 }
@@ -193,7 +257,7 @@ impl StatefulList {
     fn selected_item(&mut self) -> Option<&LogLine> {
         let ix = self.state.selected();
         if let Some(ix) = ix {
-            return Some(&self.items.borrow_dependent().0[ix]);
+            return Some(&self.items.log_lines()[ix]);
         }
 
         return None;
