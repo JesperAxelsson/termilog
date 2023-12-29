@@ -35,6 +35,8 @@ pub struct App {
     // items: StatefulList<(&'a str, usize)>,
     // events: Vec<(&'a str, &'a str)>,
     show_popup: bool,
+    follow_mode: bool,
+    show_keybindings: bool,
 }
 
 // impl<'a> App<'a> {
@@ -44,6 +46,8 @@ impl App {
             file,
             list_items: StatefulList::with_items(log_data),
             show_popup: false,
+            follow_mode: false,
+            show_keybindings: false,
         }
     }
 
@@ -51,11 +55,14 @@ impl App {
         loop {
             terminal.draw(|f| self.ui(f))?;
 
-            if event::poll(Duration::from_millis(1000))? {
+            if event::poll(Duration::from_millis(200))? {
                 if let Event::Key(key) = event::read()? {
                     match key.code {
+                        // TODO: Handle page up/down and Home/End
                         KeyCode::Char('q') => return Ok(()),
                         KeyCode::Char('p') => self.show_popup = !self.show_popup,
+                        KeyCode::Char('f') => self.follow_mode = !self.follow_mode,
+                        KeyCode::Char('?') => self.show_keybindings = !self.show_keybindings,
                         KeyCode::Left => self.list_items.unselect(),
                         KeyCode::Down => self.list_items.next(),
                         KeyCode::Up => self.list_items.previous(),
@@ -87,16 +94,11 @@ impl App {
                         self.list_items.change_log_data(ll);
                     }
 
-
-                    // let parser = raw_parse::RawParser {};
-                    // let log_lines = parser.parse_lines(&contents);
-                    //
-                    // let ll = parser.map_log(contents.clone(), log_lines.clone());
-
-                    // self.list_items.change_log_data(ll);
-
-
                     self.file.size = meta.len();
+
+                    if self.follow_mode {
+                        self.list_items.goto_end();
+                    }
 
                 } else {
                     trace!("No file changed");
@@ -249,6 +251,24 @@ impl StatefulList {
         };
         self.state.select(Some(i));
     }
+
+    pub fn goto_start(&mut self) {
+        if self.items.len() > 0 {
+            self.state.select(Some(0));
+        } else {
+            self.state.select(None);
+        }
+    }
+
+
+    pub fn goto_end(&mut self) {
+        if self.items.len() > 0 {
+            self.state.select(Some(self.items.len()-1));
+        } else {
+            self.state.select(None);
+        }
+    }
+
 
     fn unselect(&mut self) {
         self.state.select(None);
