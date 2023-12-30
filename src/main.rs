@@ -30,6 +30,7 @@ mod log_line;
 mod raw_parse;
 mod ui;
 mod app_data;
+mod stateful_list;
 
 
 fn main() -> Result<(), Box<dyn Error>> {
