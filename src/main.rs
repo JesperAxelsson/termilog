@@ -1,3 +1,6 @@
+
+#![allow(dead_code)]
+
 use log::info;
 use log::LevelFilter;
 use std::{

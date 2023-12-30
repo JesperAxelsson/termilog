@@ -8,7 +8,7 @@ use std::{
 use log::trace;
 use ratatui::{
     backend::Backend,
-    layout::{Alignment, Constraint, Direction, Layout},
+    layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Span, Line},
     widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph, Wrap},
@@ -18,7 +18,7 @@ use ratatui::{
 use crossterm::event::{Event, KeyCode, KeyEventKind};
 use crossterm::event;
 
-use tui_textarea::{Input, Key, TextArea};
+use tui_textarea::TextArea;
 
 use crate::log_line::LogLine;
 use crate::log_line::LogData;
@@ -41,7 +41,6 @@ pub struct App<'a> {
 
     input: String,
     input_mode: InputMode,
-    cursor_pos: usize,
     
     show_keybindings: bool,
     show_filter: bool,
@@ -70,7 +69,6 @@ impl<'a> App<'a> {
 
             input: String::new(),
             input_mode: InputMode::Normal,
-            cursor_pos: 0,
 
             show_keybindings: false,
             show_filter: false,
@@ -214,27 +212,11 @@ impl<'a> App<'a> {
         // We can now render the item list
         f.render_stateful_widget(items, chunks[0], &mut self.list_items.state);
 
-        // let text = if self.show_popup {
-        //     "Press p to close the popup"
-        // } else {
-        //     "Press p to show the popup"
-        // };
-        // let paragraph = Paragraph::new(Span::styled(
-        //     text,
-        //     Style::default().add_modifier(Modifier::SLOW_BLINK),
-        // ))
-        // .alignment(Alignment::Center)
-        // .wrap(Wrap { trim: true });
-        //
-        // f.render_widget(paragraph, chunks[0]);
-
         let block = Block::default()
             .title("Content")
             .borders(Borders::ALL)
             .style(Style::default().bg(Color::Blue));
 
-        // f.render_widget(block, chunks[1]);
-        // let (log_text, _) = app.items.selected_item().unwrap_or(&("default", 0));
         if let Some(log_text) = self.list_items.selected_item() {
             let paragraph = Paragraph::new(Span::styled(log_text.text(), Style::default()))
                 .block(block)
@@ -253,70 +235,11 @@ impl<'a> App<'a> {
         }
         
         if self.show_filter {
-            // let block = Paragraph::new(self.input.as_str())
-            //     .block(Block::default().title("Filter").borders(Borders::ALL));
-
-            // let mut textarea = TextArea::default();
-            // textarea.set_block(Block::default().title("Filter").borders(Borders::ALL));
-
             let area = ui::centered_rect(60, 20, size);
             f.render_widget(Clear, area); //this clears out the background
             f.render_widget(self.textarea.widget(), area);
         }
 
-    }
-
-
-  fn move_cursor_left(&mut self) {
-        let cursor_moved_left = self.cursor_pos.saturating_sub(1);
-        self.cursor_pos = self.clamp_cursor(cursor_moved_left);
-    }
-
-    fn move_cursor_right(&mut self) {
-        let cursor_moved_right = self.cursor_pos.saturating_add(1);
-        self.cursor_pos = self.clamp_cursor(cursor_moved_right);
-    }
-
-    fn enter_char(&mut self, new_char: char) {
-        self.input.insert(self.cursor_pos, new_char);
-
-        self.move_cursor_right();
-    }
-
-    fn delete_char(&mut self) {
-        let is_not_cursor_leftmost = self.cursor_pos != 0;
-        if is_not_cursor_leftmost {
-            // Method "remove" is not used on the saved text for deleting the selected char.
-            // Reason: Using remove on String works on bytes instead of the chars.
-            // Using remove would require special care because of char boundaries.
-
-            let current_index = self.cursor_pos;
-            let from_left_to_current_index = current_index - 1;
-
-            // Getting all characters before the selected character.
-            let before_char_to_delete = self.input.chars().take(from_left_to_current_index);
-            // Getting all characters after selected character.
-            let after_char_to_delete = self.input.chars().skip(current_index);
-
-            // Put all characters together except the selected one.
-            // By leaving the selected one out, it is forgotten and therefore deleted.
-            self.input = before_char_to_delete.chain(after_char_to_delete).collect();
-            self.move_cursor_left();
-        }
-    }
-
-    fn clamp_cursor(&self, new_cursor_pos: usize) -> usize {
-        new_cursor_pos.clamp(0, self.input.len())
-    }
-
-    fn reset_cursor(&mut self) {
-        self.cursor_pos = 0;
-    }
-
-    fn submit_message(&mut self) {
-        self.filter = Some(self.input.clone());
-        self.input.clear();
-        self.reset_cursor();
     }
 }
 
