@@ -66,6 +66,10 @@ impl App {
                         KeyCode::Left => self.list_items.unselect(),
                         KeyCode::Down => self.list_items.next(),
                         KeyCode::Up => self.list_items.previous(),
+                        KeyCode::Esc => {
+                            self.show_keybindings = false;
+                            self.show_popup = false;
+                        }
                         _ => {}
                     }
                 }
@@ -191,9 +195,15 @@ impl App {
             f.render_widget(Clear, area); //this clears out the background
             f.render_widget(block, area);
         }
+
+        // Render popup
+        if self.show_keybindings {
+            let block = Block::default().title("Keybindings").borders(Borders::ALL);
+            let area = ui::centered_rect(60, 20, size);
+            f.render_widget(Clear, area); //this clears out the background
+            f.render_widget(block, area);
+        }
     }
-
-
 }
 
 // use std::ops::Index;
