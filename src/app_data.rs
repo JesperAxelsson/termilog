@@ -88,15 +88,14 @@ impl<'a> App<'a> {
                                 KeyCode::Char('f') => self.follow_mode = !self.follow_mode,
                                 KeyCode::Char('?') => self.show_keybindings = !self.show_keybindings,
                                 KeyCode::Char('/') => {
-                                    self.show_filter = true;
                                     self.input_mode = InputMode::Editing;
+                                    self.show_filter = true;
                                 },
                                 KeyCode::Left => self.list_items.unselect(),
                                 KeyCode::Down => self.list_items.next(),
                                 KeyCode::Up => self.list_items.previous(),
                                 KeyCode::Esc => {
-                                    self.show_keybindings = false;
-                                    self.show_filter = false;
+                                    self.hide_popups();
                                 }
                                 _ => {}
                             }
@@ -108,15 +107,13 @@ impl<'a> App<'a> {
                                     trace!("Filter: {:?}", self.filter);
 
                                     self.input_mode = InputMode::Normal;
-                                    self.show_keybindings = false;
-                                    self.show_filter = false;
+                                    self.hide_popups()
                                 }
                                 KeyCode::Esc => {
                                     trace!("Input: {:?}", self.filter);
 
                                     self.input_mode = InputMode::Normal;
-                                    self.show_keybindings = false;
-                                    self.show_filter = false;
+                                    self.hide_popups();
                                 }
                                 _ => { self.textarea.input(key); },
                             }
@@ -233,6 +230,11 @@ impl<'a> App<'a> {
             f.render_widget(self.textarea.widget(), area);
         }
 
+    }
+
+    fn hide_popups(&mut self) {
+        self.show_filter = false;
+        self.show_keybindings = false;
     }
 }
 
