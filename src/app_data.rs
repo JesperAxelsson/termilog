@@ -36,7 +36,7 @@ pub struct App<'a> {
 
     follow_mode: bool,
 
-    filter : Option<String>,
+    filter : Option<Vec<String>>,
 
     input_mode: InputMode,
     
@@ -103,7 +103,7 @@ impl<'a> App<'a> {
                         InputMode::Editing if key.kind == KeyEventKind::Press => {
                             match key.code {
                                 KeyCode::Enter => {
-                                    self.filter = self.textarea.lines().get(0).cloned();
+                                    self.filter = Some(self.textarea.lines().iter().cloned().collect());
                                     trace!("Filter: {:?}", self.filter);
 
                                     self.input_mode = InputMode::Normal;
