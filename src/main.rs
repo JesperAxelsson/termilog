@@ -30,8 +30,8 @@ mod app_data;
 
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let _ = simple_logging::log_to_file("test.log", LevelFilter::Error);
-    // let _ = simple_logging::log_to_file("test.log", LevelFilter::Trace);
+    // let _ = simple_logging::log_to_file("test.log", LevelFilter::Error);
+    let _ = simple_logging::log_to_file("test.log", LevelFilter::Trace);
     info!("Starting up!");
 
     let now = Instant::now();
@@ -73,7 +73,8 @@ fn main() -> Result<(), Box<dyn Error>> {
    
     // setup terminal
     enable_raw_mode()?;
-    let mut stdout = io::stdout();
+    let stdout = io::stdout();
+    let mut stdout = stdout.lock();
     execute!(stdout, EnterAlternateScreen
     // , EnableMouseCapture
 )?;

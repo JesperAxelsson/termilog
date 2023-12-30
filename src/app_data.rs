@@ -15,8 +15,10 @@ use ratatui::{
     Frame, Terminal,
 };
 
-use crossterm::event::{Event, KeyCode};
+use crossterm::event::{Event, KeyCode, KeyEventKind};
 use crossterm::event;
+
+use tui_textarea::{Input, Key, TextArea};
 
 use crate::log_line::LogLine;
 use crate::log_line::LogData;
@@ -29,50 +31,104 @@ pub struct FileInfo {
 }
 
 // struct App<'a> {
-pub struct App {
+pub struct App<'a> {
     file: FileInfo,
     list_items: StatefulList,
-    // items: StatefulList<(&'a str, usize)>,
-    // events: Vec<(&'a str, &'a str)>,
-    show_popup: bool,
+
     follow_mode: bool,
+
+    filter : Option<String>,
+
+    input: String,
+    input_mode: InputMode,
+    cursor_pos: usize,
+    
     show_keybindings: bool,
+    show_filter: bool,
+
+    textarea: TextArea<'a>,
+}
+
+enum InputMode {
+    Normal,
+    Editing,
 }
 
 // impl<'a> App<'a> {
-impl App {
-    pub fn new(file: FileInfo, log_data: LogData) -> App {
+impl<'a> App<'a> {
+    pub fn new(file: FileInfo, log_data: LogData) -> App<'a> {
+        let mut textarea = TextArea::default();
+        textarea.set_block(Block::default().title("Filter").borders(Borders::ALL));
+
+
         App {
             file,
             list_items: StatefulList::with_items(log_data),
-            show_popup: false,
             follow_mode: false,
+
+            filter: None,
+
+            input: String::new(),
+            input_mode: InputMode::Normal,
+            cursor_pos: 0,
+
             show_keybindings: false,
+            show_filter: false,
+
+            textarea,
         }
     }
 
     pub fn run_app<B: Backend>(mut self, terminal: &mut Terminal<B>) -> io::Result<()> {
-        loop {
+                loop {
             terminal.draw(|f| self.ui(f))?;
 
             if event::poll(Duration::from_millis(200))? {
                 if let Event::Key(key) = event::read()? {
-                    match key.code {
-                        // TODO: Handle page up/down and Home/End
-                        KeyCode::Char('q') => return Ok(()),
-                        KeyCode::Char('p') => self.show_popup = !self.show_popup,
-                        KeyCode::Char('f') => self.follow_mode = !self.follow_mode,
-                        KeyCode::Char('?') => self.show_keybindings = !self.show_keybindings,
-                        KeyCode::Left => self.list_items.unselect(),
-                        KeyCode::Down => self.list_items.next(),
-                        KeyCode::Up => self.list_items.previous(),
-                        KeyCode::Esc => {
-                            self.show_keybindings = false;
-                            self.show_popup = false;
+                    match self.input_mode  {
+                        InputMode::Normal => {
+                            match key.code {
+                                // TODO: Handle page up/down and Home/End
+                                KeyCode::Char('q') => return Ok(()),
+                                KeyCode::Char('f') => self.follow_mode = !self.follow_mode,
+                                KeyCode::Char('?') => self.show_keybindings = !self.show_keybindings,
+                                KeyCode::Char('/') => {
+                                    self.show_filter = true;
+                                    self.input_mode = InputMode::Editing;
+                                },
+                                KeyCode::Left => self.list_items.unselect(),
+                                KeyCode::Down => self.list_items.next(),
+                                KeyCode::Up => self.list_items.previous(),
+                                KeyCode::Esc => {
+                                    self.show_keybindings = false;
+                                    self.show_filter = false;
+                                }
+                                _ => {}
+                            }
+                        },
+                        InputMode::Editing if key.kind == KeyEventKind::Press => {
+                            match key.code {
+                                KeyCode::Enter => {
+                                    self.filter = self.textarea.lines().get(0).cloned();
+                                    trace!("Filter: {:?}", self.filter);
+                                    // self.submit_message();
+                                    self.input_mode = InputMode::Normal;
+                                    self.show_keybindings = false;
+                                    self.show_filter = false;
+                                }
+                                KeyCode::Esc => {
+                                    trace!("Input: {}", self.input);
+
+                                    self.input_mode = InputMode::Normal;
+                                    self.show_keybindings = false;
+                                    self.show_filter = false;
+                                }
+                                _ => { self.textarea.input(key); },
+                            }
                         }
-                        _ => {}
+                        _ => { }
                     }
-                }
+                } 
             }
 
             // TODO: Handle notify events here
@@ -158,19 +214,19 @@ impl App {
         // We can now render the item list
         f.render_stateful_widget(items, chunks[0], &mut self.list_items.state);
 
-        let text = if self.show_popup {
-            "Press p to close the popup"
-        } else {
-            "Press p to show the popup"
-        };
-        let paragraph = Paragraph::new(Span::styled(
-            text,
-            Style::default().add_modifier(Modifier::SLOW_BLINK),
-        ))
-        .alignment(Alignment::Center)
-        .wrap(Wrap { trim: true });
-
-        f.render_widget(paragraph, chunks[0]);
+        // let text = if self.show_popup {
+        //     "Press p to close the popup"
+        // } else {
+        //     "Press p to show the popup"
+        // };
+        // let paragraph = Paragraph::new(Span::styled(
+        //     text,
+        //     Style::default().add_modifier(Modifier::SLOW_BLINK),
+        // ))
+        // .alignment(Alignment::Center)
+        // .wrap(Wrap { trim: true });
+        //
+        // f.render_widget(paragraph, chunks[0]);
 
         let block = Block::default()
             .title("Content")
@@ -189,20 +245,78 @@ impl App {
         }
 
         // Render popup
-        if self.show_popup {
-            let block = Block::default().title("Popup").borders(Borders::ALL);
-            let area = ui::centered_rect(60, 20, size);
-            f.render_widget(Clear, area); //this clears out the background
-            f.render_widget(block, area);
-        }
-
-        // Render popup
         if self.show_keybindings {
             let block = Block::default().title("Keybindings").borders(Borders::ALL);
             let area = ui::centered_rect(60, 20, size);
             f.render_widget(Clear, area); //this clears out the background
             f.render_widget(block, area);
         }
+        
+        if self.show_filter {
+            // let block = Paragraph::new(self.input.as_str())
+            //     .block(Block::default().title("Filter").borders(Borders::ALL));
+
+            // let mut textarea = TextArea::default();
+            // textarea.set_block(Block::default().title("Filter").borders(Borders::ALL));
+
+            let area = ui::centered_rect(60, 20, size);
+            f.render_widget(Clear, area); //this clears out the background
+            f.render_widget(self.textarea.widget(), area);
+        }
+
+    }
+
+
+  fn move_cursor_left(&mut self) {
+        let cursor_moved_left = self.cursor_pos.saturating_sub(1);
+        self.cursor_pos = self.clamp_cursor(cursor_moved_left);
+    }
+
+    fn move_cursor_right(&mut self) {
+        let cursor_moved_right = self.cursor_pos.saturating_add(1);
+        self.cursor_pos = self.clamp_cursor(cursor_moved_right);
+    }
+
+    fn enter_char(&mut self, new_char: char) {
+        self.input.insert(self.cursor_pos, new_char);
+
+        self.move_cursor_right();
+    }
+
+    fn delete_char(&mut self) {
+        let is_not_cursor_leftmost = self.cursor_pos != 0;
+        if is_not_cursor_leftmost {
+            // Method "remove" is not used on the saved text for deleting the selected char.
+            // Reason: Using remove on String works on bytes instead of the chars.
+            // Using remove would require special care because of char boundaries.
+
+            let current_index = self.cursor_pos;
+            let from_left_to_current_index = current_index - 1;
+
+            // Getting all characters before the selected character.
+            let before_char_to_delete = self.input.chars().take(from_left_to_current_index);
+            // Getting all characters after selected character.
+            let after_char_to_delete = self.input.chars().skip(current_index);
+
+            // Put all characters together except the selected one.
+            // By leaving the selected one out, it is forgotten and therefore deleted.
+            self.input = before_char_to_delete.chain(after_char_to_delete).collect();
+            self.move_cursor_left();
+        }
+    }
+
+    fn clamp_cursor(&self, new_cursor_pos: usize) -> usize {
+        new_cursor_pos.clamp(0, self.input.len())
+    }
+
+    fn reset_cursor(&mut self) {
+        self.cursor_pos = 0;
+    }
+
+    fn submit_message(&mut self) {
+        self.filter = Some(self.input.clone());
+        self.input.clear();
+        self.reset_cursor();
     }
 }
 
