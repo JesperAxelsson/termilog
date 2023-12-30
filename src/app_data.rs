@@ -39,7 +39,6 @@ pub struct App<'a> {
 
     filter : Option<String>,
 
-    input: String,
     input_mode: InputMode,
     
     show_keybindings: bool,
@@ -67,7 +66,6 @@ impl<'a> App<'a> {
 
             filter: None,
 
-            input: String::new(),
             input_mode: InputMode::Normal,
 
             show_keybindings: false,
@@ -109,13 +107,13 @@ impl<'a> App<'a> {
                                 KeyCode::Enter => {
                                     self.filter = self.textarea.lines().get(0).cloned();
                                     trace!("Filter: {:?}", self.filter);
-                                    // self.submit_message();
+
                                     self.input_mode = InputMode::Normal;
                                     self.show_keybindings = false;
                                     self.show_filter = false;
                                 }
                                 KeyCode::Esc => {
-                                    trace!("Input: {}", self.input);
+                                    trace!("Input: {:?}", self.filter);
 
                                     self.input_mode = InputMode::Normal;
                                     self.show_keybindings = false;
