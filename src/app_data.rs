@@ -67,6 +67,8 @@ pub struct App<'a> {
     show_filter: bool,
 
     textarea: TextArea<'a>,
+
+    exit: bool,
 }
 
 enum InputMode {
@@ -108,95 +110,109 @@ impl<'a> App<'a> {
             show_filter: false,
 
             textarea,
+
+            exit: false,
         }
     }
 
     pub fn run_app<B: Backend>(mut self, terminal: &mut Terminal<B>) -> io::Result<()> {
-        loop {
+        while !self.exit {
             terminal.draw(|f| self.ui(f))?;
 
-            if event::poll(Duration::from_millis(200))? {
-                if let Event::Key(key) = event::read()? {
-                    match self.input_mode {
-                        InputMode::Normal => {
-                            match key.code {
-                                // TODO: Handle page up/down and Home/End
-                                KeyCode::Char('q') => return Ok(()),
-                                KeyCode::Char('f') => self.follow_mode = !self.follow_mode,
-                                KeyCode::Char('?') => {
-                                    self.show_keybindings = !self.show_keybindings
-                                }
-                                KeyCode::Char('/') => {
-                                    self.input_mode = InputMode::Editing;
-                                    self.show_filter = true;
-                                }
-                                KeyCode::Left => self.list_items.unselect(),
-                                KeyCode::Down => self.list_items.next(),
-                                KeyCode::Up => self.list_items.previous(),
-                                KeyCode::Esc => {
-                                    self.hide_popups();
-                                }
-                                _ => {}
-                            }
-                        }
-                        InputMode::Editing if key.kind == KeyEventKind::Press => match key.code {
-                            KeyCode::Enter => {
-                                self.filter = Some(self.textarea.lines().iter().cloned().collect());
-                                trace!("Filter: {:?}", self.filter);
+            self.handle_events()?;
 
-                                self.input_mode = InputMode::Normal;
-                                self.hide_popups()
-                            }
-                            KeyCode::Esc => {
-                                trace!("Input: {:?}", self.filter);
-
-                                self.input_mode = InputMode::Normal;
-                                self.hide_popups();
-                            }
-                            _ => {
-                                self.textarea.input(key);
-                            }
-                        },
-                        _ => {}
-                    }
-                }
-            }
-
-            // Handle notify events here
-            if let Ok(meta) = metadata(&self.file.name) {
-                if self.file.size != meta.len() {
-                    let mut file = File::open(&self.file.name)?;
-
-                    if self.file.size < meta.len() {
-                        file.seek(SeekFrom::Start(self.file.size)).unwrap();
-                    }
-
-                    let mut contents = String::new();
-                    file.read_to_string(&mut contents)?;
-
-                    if self.file.size < meta.len() {
-                        trace!("File size increased {:?}", contents);
-                        self.list_items.append_text(&contents);
-                    } else {
-                        trace!("File size reduced {:?} to {:?}", self.file.size, meta.len());
-                        let ll = LogData::from_content(contents);
-                        self.list_items.change_log_data(ll);
-                    }
-
-                    self.file.size = meta.len();
-
-                    if self.follow_mode {
-                        self.list_items.goto_end();
-                    }
-                } else {
-                    trace!("No file changed");
-                }
-            } else {
-                trace!("File gone!");
-            }
+            self.listen_file_notification()?;
 
             trace!("Loop!");
         }
+
+        Ok(())
+    }
+
+    fn handle_events(&mut self) -> io::Result<()> {
+        if event::poll(Duration::from_millis(200))? {
+            if let Event::Key(key) = event::read()? {
+                match self.input_mode {
+                    InputMode::Normal => {
+                        match key.code {
+                            // TODO: Handle page up/down and Home/End
+                            KeyCode::Char('q') => self.exit = true,
+                            KeyCode::Char('f') => self.follow_mode = !self.follow_mode,
+                            KeyCode::Char('?') => self.show_keybindings = !self.show_keybindings,
+                            KeyCode::Char('/') => {
+                                self.input_mode = InputMode::Editing;
+                                self.show_filter = true;
+                            }
+                            KeyCode::Left => self.list_items.unselect(),
+                            KeyCode::Down => self.list_items.next(),
+                            KeyCode::Up => self.list_items.previous(),
+                            KeyCode::Esc => {
+                                self.hide_popups();
+                            }
+                            _ => {}
+                        }
+                    }
+                    InputMode::Editing if key.kind == KeyEventKind::Press => match key.code {
+                        KeyCode::Enter => {
+                            self.filter = Some(self.textarea.lines().iter().cloned().collect());
+                            trace!("Filter: {:?}", self.filter);
+
+                            self.input_mode = InputMode::Normal;
+                            self.hide_popups()
+                        }
+                        KeyCode::Esc => {
+                            trace!("Input: {:?}", self.filter);
+
+                            self.input_mode = InputMode::Normal;
+                            self.hide_popups();
+                        }
+                        _ => {
+                            self.textarea.input(key);
+                        }
+                    },
+                    _ => {}
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    fn listen_file_notification(&mut self) -> io::Result<()> {
+        // Handle notify events here
+        if let Ok(meta) = metadata(&self.file.name) {
+            if self.file.size != meta.len() {
+                let mut file = File::open(&self.file.name)?;
+
+                if self.file.size < meta.len() {
+                    file.seek(SeekFrom::Start(self.file.size)).unwrap();
+                }
+
+                let mut contents = String::new();
+                file.read_to_string(&mut contents)?;
+
+                if self.file.size < meta.len() {
+                    trace!("File size increased {:?}", contents);
+                    self.list_items.append_text(&contents);
+                } else {
+                    trace!("File size reduced {:?} to {:?}", self.file.size, meta.len());
+                    let ll = LogData::from_content(contents);
+                    self.list_items.change_log_data(ll);
+                }
+
+                self.file.size = meta.len();
+
+                if self.follow_mode {
+                    self.list_items.goto_end();
+                }
+            } else {
+                trace!("No file changed");
+            }
+        } else {
+            trace!("File gone!");
+        }
+
+        Ok(())
     }
 
     fn ui(&mut self, f: &mut Frame) {
