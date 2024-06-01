@@ -1,12 +1,5 @@
 use log::trace;
-use ratatui::{
-    backend::Backend,
-    layout::{Constraint, Direction, Layout},
-    style::{Color, Modifier, Style},
-    text::{Line, Span},
-    widgets::{Block, Borders, Clear, List, ListItem, Paragraph, Wrap},
-    Frame, Terminal,
-};
+use ratatui::{prelude::*, widgets::*};
 use std::io::{Seek, SeekFrom};
 use std::{fs::metadata, io, time::Duration};
 use std::{fs::File, io::Read};
@@ -21,13 +14,13 @@ use crate::stateful_list::StatefulList;
 use crate::ui;
 
 #[derive(Debug)]
-pub struct Keybinding {
+pub struct KeyBinding {
     pub key: KeyCode,
     pub description: String,
     pub command: Command,
 }
 
-impl Keybinding {
+impl KeyBinding {
     pub fn new(key: KeyCode, description: String, command: Command) -> Self {
         Self {
             key,
@@ -43,6 +36,9 @@ pub enum Command {
     ShowKeybindings,
     Filter,
     Follow,
+    ListUp,
+    ListDown,
+    Unselect,
 }
 
 #[derive(Debug)]
@@ -55,7 +51,6 @@ pub struct FileInfo {
 pub struct App<'a> {
     file: FileInfo,
     list_items: StatefulList,
-    key_bindings: Vec<Keybinding>,
 
     follow_mode: bool,
 
@@ -63,7 +58,12 @@ pub struct App<'a> {
 
     input_mode: InputMode,
 
+    keybindings_selected: Option<usize>,
+    keybindings_length: usize,
+    keybindings: Vec<KeyBinding>,
+    keybindings_state: TableState,
     show_keybindings: bool,
+
     show_filter: bool,
 
     textarea: TextArea<'a>,
@@ -73,8 +73,16 @@ pub struct App<'a> {
 
 enum InputMode {
     Normal,
-    Editing,
+    EditingFilter,
+    ShowingKeybindings,
 }
+
+// pub enum AppState {
+//     Browsing,
+//     WaitingForFile,
+//     ShowKeybindings,
+//     ShowFilter,
+// }
 
 // impl<'a> App<'a> {
 impl<'a> App<'a> {
@@ -82,23 +90,33 @@ impl<'a> App<'a> {
         let mut textarea = TextArea::default();
         textarea.set_block(Block::default().title("Filter").borders(Borders::ALL));
 
-        let key_bindings = vec![
-            Keybinding::new(
+        let keybindings = vec![
+            KeyBinding::new(
                 KeyCode::Char('f'),
                 "Toggle follow new logs".to_owned(),
                 Command::Follow,
             ),
-            Keybinding::new(
+            KeyBinding::new(
                 KeyCode::Char('/'),
                 "Filter on things".to_owned(),
                 Command::Filter,
+            ),
+            KeyBinding::new(
+                KeyCode::Char('q'),
+                "Exit application".to_owned(),
+                Command::Quit,
+            ),
+            KeyBinding::new(KeyCode::Up, "Move list up".to_owned(), Command::ListUp),
+            KeyBinding::new(
+                KeyCode::Down,
+                "Move list down".to_owned(),
+                Command::ListDown,
             ),
         ];
 
         App {
             file,
             list_items: StatefulList::with_items(log_data),
-            key_bindings,
 
             follow_mode: false,
 
@@ -106,7 +124,12 @@ impl<'a> App<'a> {
 
             input_mode: InputMode::Normal,
 
+            keybindings,
+            keybindings_selected: None,
+            keybindings_length: 50,
+            keybindings_state: TableState::default(),
             show_keybindings: false,
+
             show_filter: false,
 
             textarea,
@@ -123,7 +146,7 @@ impl<'a> App<'a> {
 
             self.listen_file_notification()?;
 
-            trace!("Loop!");
+            // trace!("Loop!");
         }
 
         Ok(())
@@ -132,15 +155,22 @@ impl<'a> App<'a> {
     fn handle_events(&mut self) -> io::Result<()> {
         if event::poll(Duration::from_millis(200))? {
             if let Event::Key(key) = event::read()? {
+                if key.code == KeyCode::Char('q') {
+                    self.exit = true;
+                    return Ok(());
+                }
+
                 match self.input_mode {
                     InputMode::Normal => {
                         match key.code {
                             // TODO: Handle page up/down and Home/End
-                            KeyCode::Char('q') => self.exit = true,
                             KeyCode::Char('f') => self.follow_mode = !self.follow_mode,
-                            KeyCode::Char('?') => self.show_keybindings = !self.show_keybindings,
+                            KeyCode::Char('?') => {
+                                self.show_keybindings = true;
+                                self.input_mode = InputMode::ShowingKeybindings;
+                            }
                             KeyCode::Char('/') => {
-                                self.input_mode = InputMode::Editing;
+                                self.input_mode = InputMode::EditingFilter;
                                 self.show_filter = true;
                             }
                             KeyCode::Left => self.list_items.unselect(),
@@ -152,7 +182,7 @@ impl<'a> App<'a> {
                             _ => {}
                         }
                     }
-                    InputMode::Editing if key.kind == KeyEventKind::Press => match key.code {
+                    InputMode::EditingFilter if key.kind == KeyEventKind::Press => match key.code {
                         KeyCode::Enter => {
                             self.filter = Some(self.textarea.lines().iter().cloned().collect());
                             trace!("Filter: {:?}", self.filter);
@@ -170,7 +200,44 @@ impl<'a> App<'a> {
                             self.textarea.input(key);
                         }
                     },
-                    _ => {}
+                    InputMode::EditingFilter => {} // Key up. We handle all events above
+                    InputMode::ShowingKeybindings => {
+                        match key.code {
+                            KeyCode::Up => {
+                                if let Some(n) = self.keybindings_selected {
+                                    if n > 0 {
+                                        self.keybindings_selected =
+                                            Some((n - 1).clamp(0, self.keybindings_length - 1));
+                                    } else {
+                                        self.keybindings_selected = Some(0);
+                                    }
+                                } else {
+                                    self.keybindings_selected = Some(0);
+                                }
+
+                                self.keybindings_state.select(self.keybindings_selected);
+                                trace!("Keybind up {:?}", self.keybindings_state);
+                            }
+                            KeyCode::Down => {
+                                if let Some(n) = self.keybindings_selected {
+                                    self.keybindings_selected =
+                                        Some((n + 1).clamp(0, self.keybindings_length - 1));
+                                } else {
+                                    self.keybindings_selected = Some(0);
+                                }
+                                self.keybindings_state.select(self.keybindings_selected);
+                                trace!("Keybind down {:?}", self.keybindings_state);
+                            }
+                            KeyCode::Esc => {
+                                trace!("Input: {:?}", self.filter);
+
+                                self.input_mode = InputMode::Normal;
+                                self.hide_popups();
+                            }
+                            // KeyCode::Up => self.list_items.previous(),
+                            _ => {}
+                        }
+                    }
                 }
             }
         }
@@ -206,7 +273,7 @@ impl<'a> App<'a> {
                     self.list_items.goto_end();
                 }
             } else {
-                trace!("No file changed");
+                // trace!("No file changed");
             }
         } else {
             trace!("File gone!");
@@ -271,6 +338,7 @@ impl<'a> App<'a> {
 
         // Render popup
         if self.show_keybindings {
+            // self.keybindings_state = TableState::default();
             self.render_key_bindings(f);
             // let block = Block::default().title("Keybindings").borders(Borders::ALL);
             // let area = ui::centered_rect(60, 20, size);
@@ -290,25 +358,31 @@ impl<'a> App<'a> {
         self.show_keybindings = false;
     }
 
-    fn render_key_bindings(&self, f: &mut Frame) {
-        //
-        // let keybindings = [
-        let block = Block::default().title("Keybindings").borders(Borders::ALL);
+    fn render_key_bindings(&mut self, f: &mut Frame) {
         let area = ui::centered_rect(60, 20, f.size());
-        // self.keybindings.
-        //
-        let chunks = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
-            .split(f.size());
-
-        let block_l = Block::default().title("Key").borders(Borders::ALL);
-        let block_r = Block::default().title("Description").borders(Borders::ALL);
-
-        f.render_widget(block_l, chunks[0]);
-        f.render_widget(block_r, chunks[1]);
 
         f.render_widget(Clear, area); //this clears out the background
-        f.render_widget(block, area);
+
+        let rows = self.keybindings.iter().map(|kb| {
+            Row::new(vec![
+                format!("{:?}", kb.key).to_owned(),
+                kb.description.clone(),
+            ])
+        });
+
+        let widths = [Constraint::Length(9), Constraint::Percentage(90)];
+
+        let title_block = Block::default().title("Keybindings").borders(Borders::ALL);
+        let table = Table::new(rows, widths).block(title_block);
+
+        f.render_stateful_widget(
+            table,
+            area, //     .inner(&Margin {
+            //     vertical: 2,
+            //     horizontal: 2,
+            // })
+            // .offset(Offset { x: 1, y: 1 }),
+            &mut self.keybindings_state,
+        )
     }
 }
