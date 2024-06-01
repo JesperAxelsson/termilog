@@ -56,22 +56,18 @@ pub struct App<'a> {
 
     filter: Option<Vec<String>>,
 
-    input_mode: InputMode,
+    app_mode: AppMode,
 
-    keybindings_selected: Option<usize>,
-    keybindings_length: usize,
     keybindings: Vec<KeyBinding>,
     keybindings_state: TableState,
-    show_keybindings: bool,
-
-    show_filter: bool,
 
     textarea: TextArea<'a>,
 
     exit: bool,
 }
 
-enum InputMode {
+#[derive(Debug, PartialEq, Eq)]
+enum AppMode {
     Normal,
     EditingFilter,
     ShowingKeybindings,
@@ -122,15 +118,10 @@ impl<'a> App<'a> {
 
             filter: None,
 
-            input_mode: InputMode::Normal,
+            app_mode: AppMode::Normal,
 
             keybindings,
-            keybindings_selected: None,
-            keybindings_length: 50,
             keybindings_state: TableState::default(),
-            show_keybindings: false,
-
-            show_filter: false,
 
             textarea,
 
@@ -155,24 +146,22 @@ impl<'a> App<'a> {
     fn handle_events(&mut self) -> io::Result<()> {
         if event::poll(Duration::from_millis(200))? {
             if let Event::Key(key) = event::read()? {
-                if key.code == KeyCode::Char('q') {
-                    self.exit = true;
-                    return Ok(());
+                // Global key commands
+                match key.code {
+                    KeyCode::Char('q') => {
+                        self.exit = true;
+                        return Ok(());
+                    }
+                    _ => {}
                 }
 
-                match self.input_mode {
-                    InputMode::Normal => {
+                match self.app_mode {
+                    AppMode::Normal => {
                         match key.code {
                             // TODO: Handle page up/down and Home/End
                             KeyCode::Char('f') => self.follow_mode = !self.follow_mode,
-                            KeyCode::Char('?') => {
-                                self.show_keybindings = true;
-                                self.input_mode = InputMode::ShowingKeybindings;
-                            }
-                            KeyCode::Char('/') => {
-                                self.input_mode = InputMode::EditingFilter;
-                                self.show_filter = true;
-                            }
+                            KeyCode::Char('?') => self.app_mode = AppMode::ShowingKeybindings,
+                            KeyCode::Char('/') => self.app_mode = AppMode::EditingFilter,
                             KeyCode::Left => self.list_items.unselect(),
                             KeyCode::Down => self.list_items.next(),
                             KeyCode::Up => self.list_items.previous(),
@@ -182,59 +171,51 @@ impl<'a> App<'a> {
                             _ => {}
                         }
                     }
-                    InputMode::EditingFilter if key.kind == KeyEventKind::Press => match key.code {
+                    AppMode::EditingFilter if key.kind == KeyEventKind::Press => match key.code {
                         KeyCode::Enter => {
                             self.filter = Some(self.textarea.lines().iter().cloned().collect());
                             trace!("Filter: {:?}", self.filter);
 
-                            self.input_mode = InputMode::Normal;
+                            self.app_mode = AppMode::Normal;
                             self.hide_popups()
                         }
                         KeyCode::Esc => {
                             trace!("Input: {:?}", self.filter);
 
-                            self.input_mode = InputMode::Normal;
+                            self.app_mode = AppMode::Normal;
                             self.hide_popups();
                         }
                         _ => {
                             self.textarea.input(key);
                         }
                     },
-                    InputMode::EditingFilter => {} // Key up. We handle all events above
-                    InputMode::ShowingKeybindings => {
+                    AppMode::EditingFilter => {} // Key up. We handle all events above
+                    AppMode::ShowingKeybindings => {
                         match key.code {
                             KeyCode::Up => {
-                                if let Some(n) = self.keybindings_selected {
-                                    if n > 0 {
-                                        self.keybindings_selected =
-                                            Some((n - 1).clamp(0, self.keybindings_length - 1));
+                                if let Some(n) = self.keybindings_state.selected_mut() {
+                                    if *n > 0 {
+                                        *n = (*n - 1).clamp(0, self.keybindings.len() - 1);
                                     } else {
-                                        self.keybindings_selected = Some(0);
+                                        *n = 0;
                                     }
                                 } else {
-                                    self.keybindings_selected = Some(0);
+                                    self.keybindings_state.select(Some(0));
                                 }
-
-                                self.keybindings_state.select(self.keybindings_selected);
-                                trace!("Keybind up {:?}", self.keybindings_state);
+                                // trace!("Keybind up {:?}", self.keybindings_state);
                             }
                             KeyCode::Down => {
-                                if let Some(n) = self.keybindings_selected {
-                                    self.keybindings_selected =
-                                        Some((n + 1).clamp(0, self.keybindings_length - 1));
+                                if let Some(n) = self.keybindings_state.selected_mut() {
+                                    *n = (*n + 1).clamp(0, self.keybindings.len() - 1);
                                 } else {
-                                    self.keybindings_selected = Some(0);
+                                    self.keybindings_state.select(Some(0));
                                 }
-                                self.keybindings_state.select(self.keybindings_selected);
-                                trace!("Keybind down {:?}", self.keybindings_state);
+                                // trace!("Keybind down {:?}", self.keybindings_state);
                             }
                             KeyCode::Esc => {
-                                trace!("Input: {:?}", self.filter);
-
-                                self.input_mode = InputMode::Normal;
+                                self.app_mode = AppMode::Normal;
                                 self.hide_popups();
                             }
-                            // KeyCode::Up => self.list_items.previous(),
                             _ => {}
                         }
                     }
@@ -337,16 +318,11 @@ impl<'a> App<'a> {
         }
 
         // Render popup
-        if self.show_keybindings {
-            // self.keybindings_state = TableState::default();
+        if self.app_mode == AppMode::ShowingKeybindings {
             self.render_key_bindings(f);
-            // let block = Block::default().title("Keybindings").borders(Borders::ALL);
-            // let area = ui::centered_rect(60, 20, size);
-            // f.render_widget(Clear, area); //this clears out the background
-            // f.render_widget(block, area);
         }
 
-        if self.show_filter {
+        if self.app_mode == AppMode::EditingFilter {
             let area = ui::centered_rect(60, 20, size);
             f.render_widget(Clear, area); //this clears out the background
             f.render_widget(self.textarea.widget(), area);
@@ -354,8 +330,7 @@ impl<'a> App<'a> {
     }
 
     fn hide_popups(&mut self) {
-        self.show_filter = false;
-        self.show_keybindings = false;
+        self.app_mode = AppMode::Normal;
     }
 
     fn render_key_bindings(&mut self, f: &mut Frame) {
@@ -373,16 +348,10 @@ impl<'a> App<'a> {
         let widths = [Constraint::Length(9), Constraint::Percentage(90)];
 
         let title_block = Block::default().title("Keybindings").borders(Borders::ALL);
-        let table = Table::new(rows, widths).block(title_block);
+        let table = Table::new(rows, widths)
+            .block(title_block)
+            .highlight_symbol(">");
 
-        f.render_stateful_widget(
-            table,
-            area, //     .inner(&Margin {
-            //     vertical: 2,
-            //     horizontal: 2,
-            // })
-            // .offset(Offset { x: 1, y: 1 }),
-            &mut self.keybindings_state,
-        )
+        f.render_stateful_widget(table, area, &mut self.keybindings_state)
     }
 }
