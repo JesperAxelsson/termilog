@@ -271,6 +271,37 @@ impl<'a> App<'a> {
             .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
             .split(f.size());
 
+        self.render_log_list(f, &chunks[0]);
+        self.render_full_log(f, &chunks[1]);
+
+        // Render popup
+        if self.app_mode == AppMode::ShowingKeybindings {
+            self.render_key_bindings(f);
+        }
+
+        if self.app_mode == AppMode::EditingFilter {
+            let area = ui::centered_rect(60, 20, size);
+            f.render_widget(Clear, area); //this clears out the background
+            f.render_widget(self.textarea.widget(), area);
+        }
+    }
+
+    fn render_full_log(&mut self, f: &mut Frame, area: &Rect) {
+        let block = Block::default()
+            .title("Content")
+            .borders(Borders::ALL)
+            .style(Style::default().bg(Color::Blue));
+
+        if let Some(log_text) = self.list_items.selected_item() {
+            let paragraph = Paragraph::new(Span::styled(log_text.text(), Style::default()))
+                .block(block)
+                .wrap(Wrap { trim: true });
+
+            f.render_widget(paragraph, *area);
+        }
+    }
+
+    fn render_log_list(&mut self, f: &mut Frame, area: &Rect) {
         // Iterate through all elements in the `items` app and append some debug text to it.
         let items: Vec<ListItem> = self
             .list_items
@@ -291,7 +322,7 @@ impl<'a> App<'a> {
             .collect();
 
         // Create a List from all list items and highlight the currently selected one
-        let items = List::new(items)
+        let list_widget = List::new(items)
             .block(Block::default().borders(Borders::ALL).title("List"))
             .highlight_style(
                 Style::default()
@@ -301,32 +332,7 @@ impl<'a> App<'a> {
             .highlight_symbol(">> ");
 
         // We can now render the item list
-        f.render_stateful_widget(items, chunks[0], &mut self.list_items.state);
-
-        let block = Block::default()
-            .title("Content")
-            .borders(Borders::ALL)
-            .style(Style::default().bg(Color::Blue));
-
-        if let Some(log_text) = self.list_items.selected_item() {
-            let paragraph = Paragraph::new(Span::styled(log_text.text(), Style::default()))
-                .block(block)
-                // .alignment(Alignment::Center)
-                .wrap(Wrap { trim: true });
-
-            f.render_widget(paragraph, chunks[1]);
-        }
-
-        // Render popup
-        if self.app_mode == AppMode::ShowingKeybindings {
-            self.render_key_bindings(f);
-        }
-
-        if self.app_mode == AppMode::EditingFilter {
-            let area = ui::centered_rect(60, 20, size);
-            f.render_widget(Clear, area); //this clears out the background
-            f.render_widget(self.textarea.widget(), area);
-        }
+        f.render_stateful_widget(list_widget, *area, &mut self.list_items.state);
     }
 
     fn hide_popups(&mut self) {
@@ -346,6 +352,7 @@ impl<'a> App<'a> {
         });
 
         let widths = [Constraint::Length(9), Constraint::Percentage(90)];
+        // let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight);
 
         let title_block = Block::default().title("Keybindings").borders(Borders::ALL);
         let table = Table::new(rows, widths)
