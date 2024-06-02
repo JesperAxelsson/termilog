@@ -23,11 +23,18 @@ use app_data::App;
 use crate::app_data::FileInfo;
 
 mod log_line;
-// mod parse_log;
 mod app_data;
 mod raw_parse;
 mod stateful_list;
 mod ui;
+
+
+// # Planned and missing features:
+// - Follow the list when new log arrive
+// - Clear toggle to empty visible logs
+// - Scroll bar for logs...
+// - Fix formatting in the full size log window
+
 
 /// Laravel log reader
 #[derive(Parser, Debug)]
