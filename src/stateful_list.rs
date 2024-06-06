@@ -1,5 +1,5 @@
-use std::{cmp, mem};
 use ratatui::widgets::ListState;
+use std::{cmp, mem};
 
 use crate::log_line::LogData;
 use crate::log_line::LogLine;
@@ -10,7 +10,6 @@ pub struct StatefulList {
 }
 
 impl StatefulList {
-
     pub fn with_items(items: LogData) -> StatefulList {
         StatefulList {
             state: ListState::default(),
@@ -67,15 +66,21 @@ impl StatefulList {
         }
     }
 
-
     pub fn goto_end(&mut self) {
         if self.items.len() > 0 {
-            self.state.select(Some(self.items.len()-1));
+            self.state.select(Some(self.items.len() - 1));
         } else {
             self.state.select(None);
         }
     }
 
+    pub fn jump_relative(&mut self, jump: isize) {
+        if self.items.len() > 0 {
+            let curent_ix = self.state.offset() as isize;
+            let ix = (curent_ix + jump).clamp(0, self.items.len() as isize - 1);
+            self.state.select(Some(ix as usize));
+        }
+    }
 
     pub fn unselect(&mut self) {
         self.state.select(None);
@@ -90,4 +95,3 @@ impl StatefulList {
         None
     }
 }
-

@@ -30,10 +30,11 @@ mod ui;
 
 
 // # Planned and missing features:
-// - Follow the list when new log arrive
+// - Show enabled modes and status in status bar
 // - Clear toggle to empty visible logs
 // - Scroll bar for logs...
 // - Fix formatting in the full size log window
+// - Group duplicated messages
 
 
 /// Laravel log reader

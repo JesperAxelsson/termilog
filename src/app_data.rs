@@ -49,6 +49,7 @@ pub struct FileInfo {
 
 // struct App<'a> {
 pub struct App<'a> {
+    size: Rect,
     file: FileInfo,
     list_items: StatefulList,
 
@@ -111,6 +112,7 @@ impl<'a> App<'a> {
         ];
 
         App {
+            size: Rect::default(),
             file,
             list_items: StatefulList::with_items(log_data),
 
@@ -131,6 +133,10 @@ impl<'a> App<'a> {
 
     pub fn run_app<B: Backend>(mut self, terminal: &mut Terminal<B>) -> io::Result<()> {
         while !self.exit {
+            if self.follow_mode {
+                self.list_items.goto_end();
+            }
+
             terminal.draw(|f| self.ui(f))?;
 
             self.handle_events()?;
@@ -158,10 +164,19 @@ impl<'a> App<'a> {
                 match self.app_mode {
                     AppMode::Normal => {
                         match key.code {
-                            // TODO: Handle page up/down and Home/End
                             KeyCode::Char('f') => self.follow_mode = !self.follow_mode,
                             KeyCode::Char('?') => self.app_mode = AppMode::ShowingKeybindings,
                             KeyCode::Char('/') => self.app_mode = AppMode::EditingFilter,
+
+                            KeyCode::PageUp => self
+                                .list_items
+                                .jump_relative(-((self.size.height - 4) as isize)),
+                            KeyCode::PageDown => self
+                                .list_items
+                                .jump_relative((self.size.height - 4) as isize),
+
+                            KeyCode::Home => self.list_items.goto_start(),
+                            KeyCode::End => self.list_items.goto_end(),
                             KeyCode::Left => self.list_items.unselect(),
                             KeyCode::Down => self.list_items.next(),
                             KeyCode::Up => self.list_items.previous(),
@@ -265,6 +280,7 @@ impl<'a> App<'a> {
 
     fn ui(&mut self, f: &mut Frame) {
         let size = f.size();
+        self.size = size;
 
         let chunks = Layout::default()
             .direction(Direction::Horizontal)
@@ -330,6 +346,8 @@ impl<'a> App<'a> {
                     .add_modifier(Modifier::BOLD),
             )
             .highlight_symbol(">> ");
+
+        // Follow the list here?
 
         // We can now render the item list
         f.render_stateful_widget(list_widget, *area, &mut self.list_items.state);
