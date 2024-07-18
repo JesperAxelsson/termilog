@@ -307,9 +307,9 @@ impl<'a> App<'a> {
             .style(Style::default().bg(Color::Blue));
 
         if let Some(log_text) = self.list_items.selected_item() {
-            let paragraph = Paragraph::new(Span::styled(log_text.text(), Style::default()))
+            let paragraph = Paragraph::new(Text::raw(log_text.text()))
                 .block(block)
-                .wrap(Wrap { trim: true });
+                .wrap(Wrap { trim: false });
 
             f.render_widget(paragraph, *area);
         }
