@@ -30,6 +30,14 @@ impl StatefulList {
         self.items = items.append_text(content);
     }
 
+    pub fn iter(&self) -> std::slice::Iter<'_, LogLine<'_>> {
+         self
+            .items
+            .borrow_dependent()
+            .0
+            .iter()
+    }
+
     pub fn next(&mut self) {
         let i = match self.state.selected() {
             Some(i) => {

@@ -162,30 +162,28 @@ impl<'a> App<'a> {
                 }
 
                 match self.app_mode {
-                    AppMode::Normal => {
-                        match key.code {
-                            KeyCode::Char('f') => self.follow_mode = !self.follow_mode,
-                            KeyCode::Char('?') => self.app_mode = AppMode::ShowingKeybindings,
-                            KeyCode::Char('/') => self.app_mode = AppMode::EditingFilter,
+                    AppMode::Normal => match key.code {
+                        KeyCode::Char('f') => self.follow_mode = !self.follow_mode,
+                        KeyCode::Char('?') => self.app_mode = AppMode::ShowingKeybindings,
+                        KeyCode::Char('/') => self.app_mode = AppMode::EditingFilter,
 
-                            KeyCode::PageUp => self
-                                .list_items
-                                .jump_relative(-((self.size.height - 4) as isize)),
-                            KeyCode::PageDown => self
-                                .list_items
-                                .jump_relative((self.size.height - 4) as isize),
+                        KeyCode::PageUp => self
+                            .list_items
+                            .jump_relative(-((self.size.height - 4) as isize)),
+                        KeyCode::PageDown => self
+                            .list_items
+                            .jump_relative((self.size.height - 4) as isize),
 
-                            KeyCode::Home => self.list_items.goto_start(),
-                            KeyCode::End => self.list_items.goto_end(),
-                            KeyCode::Left => self.list_items.unselect(),
-                            KeyCode::Down => self.list_items.next(),
-                            KeyCode::Up => self.list_items.previous(),
-                            KeyCode::Esc => {
-                                self.hide_popups();
-                            }
-                            _ => {}
+                        KeyCode::Home => self.list_items.goto_start(),
+                        KeyCode::End => self.list_items.goto_end(),
+                        KeyCode::Left => self.list_items.unselect(),
+                        KeyCode::Down => self.list_items.next(),
+                        KeyCode::Up => self.list_items.previous(),
+                        KeyCode::Esc => {
+                            self.hide_popups();
                         }
-                    }
+                        _ => {}
+                    },
                     AppMode::EditingFilter if key.kind == KeyEventKind::Press => match key.code {
                         KeyCode::Enter => {
                             self.filter = Some(self.textarea.lines().iter().cloned().collect());
@@ -319,11 +317,10 @@ impl<'a> App<'a> {
 
     fn render_log_list(&mut self, f: &mut Frame, area: &Rect) {
         // Iterate through all elements in the `items` app and append some debug text to it.
+        // TODO: Cache or something se we don't recreate this every render
+        let mut item_state = self.list_items.state.clone();
         let items: Vec<ListItem> = self
             .list_items
-            .items
-            .borrow_dependent()
-            .0
             .iter()
             .map(|i| {
                 let mut lines = vec![Line::from(i.info())];
@@ -350,7 +347,8 @@ impl<'a> App<'a> {
         // Follow the list here?
 
         // We can now render the item list
-        f.render_stateful_widget(list_widget, *area, &mut self.list_items.state);
+        f.render_stateful_widget(list_widget, *area, &mut item_state);
+        self.list_items.state = item_state;
     }
 
     fn hide_popups(&mut self) {
