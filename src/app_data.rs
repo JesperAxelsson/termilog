@@ -63,6 +63,7 @@ pub struct App<'a> {
     keybindings_state: TableState,
 
     textarea: TextArea<'a>,
+    log_textarea: Option<TextArea<'a>>,
 
     exit: bool,
 }
@@ -70,6 +71,7 @@ pub struct App<'a> {
 #[derive(Debug, PartialEq, Eq)]
 enum AppMode {
     Normal,
+    FocusLogText,
     EditingFilter,
     ShowingKeybindings,
 }
@@ -126,6 +128,7 @@ impl<'a> App<'a> {
             keybindings_state: TableState::default(),
 
             textarea,
+            log_textarea: None,
 
             exit: false,
         }
@@ -162,36 +165,56 @@ impl<'a> App<'a> {
                 }
 
                 match self.app_mode {
-                    AppMode::Normal => match key.code {
-                        KeyCode::Char('f') => self.follow_mode = !self.follow_mode,
-                        KeyCode::Char('?') => self.app_mode = AppMode::ShowingKeybindings,
-                        KeyCode::Char('/') => self.app_mode = AppMode::EditingFilter,
+                    AppMode::Normal => {
+                        match key.code {
+                            KeyCode::Char('f') => self.follow_mode = !self.follow_mode,
+                            KeyCode::Char('?') => self.app_mode = AppMode::ShowingKeybindings,
+                            KeyCode::Char('/') => self.app_mode = AppMode::EditingFilter,
+                            KeyCode::Tab => self.app_mode = AppMode::FocusLogText,
 
-                        KeyCode::PageUp => self
-                            .list_items
-                            .jump_relative(-((self.size.height - 4) as isize)),
-                        KeyCode::PageDown => self
-                            .list_items
-                            .jump_relative((self.size.height - 4) as isize),
+                            KeyCode::PageUp => self
+                                .list_items
+                                .jump_relative(-((self.size.height - 4) as isize)),
+                            KeyCode::PageDown => self
+                                .list_items
+                                .jump_relative((self.size.height - 4) as isize),
 
-                        KeyCode::Home => self.list_items.goto_start(),
-                        KeyCode::End => self.list_items.goto_end(),
-                        KeyCode::Left => self.list_items.unselect(),
-                        KeyCode::Down => self.list_items.next(),
-                        KeyCode::Up => self.list_items.previous(),
-                        KeyCode::Esc => {
-                            self.hide_popups();
+                            KeyCode::Home => self.list_items.goto_start(),
+                            KeyCode::End => self.list_items.goto_end(),
+                            KeyCode::Left => self.list_items.unselect(),
+                            KeyCode::Down => self.list_items.next(),
+                            KeyCode::Up => self.list_items.previous(),
+                            KeyCode::Esc => {
+                                self.hide_popups();
+                            }
+                            _ => {}
                         }
-                        _ => {}
+
+                        if let Some(log_text) = self.list_items.selected_item() {
+                            let ss: String = log_text.text().to_owned();
+                            let lines: Vec<_> = ss.lines().map(String::from).collect();
+                            self.log_textarea = Some(TextArea::new(lines));
+                        }
+                    }
+                    AppMode::FocusLogText if key.kind == KeyEventKind::Press => match key.code {
+                        KeyCode::Esc => self.app_mode = AppMode::Normal,
+                        _ => {
+                            // trace!("Got input");
+                            self.log_textarea
+                                .as_mut()
+                                .expect("Log text area should never be None when in FocusLogMode")
+                                .input(key);
+                        }
                     },
+                    AppMode::FocusLogText => {}
                     AppMode::EditingFilter if key.kind == KeyEventKind::Press => match key.code {
-                        KeyCode::Enter => {
-                            self.filter = Some(self.textarea.lines().iter().cloned().collect());
-                            trace!("Filter: {:?}", self.filter);
-
-                            self.app_mode = AppMode::Normal;
-                            self.hide_popups()
-                        }
+                        // KeyCode::Enter => {
+                        //     self.filter = Some(self.textarea.lines().iter().cloned().collect());
+                        //     trace!("Filter: {:?}", self.filter);
+                        //
+                        //     self.app_mode = AppMode::Normal;
+                        //     self.hide_popups()
+                        // }
                         KeyCode::Esc => {
                             trace!("Input: {:?}", self.filter);
 
@@ -306,13 +329,12 @@ impl<'a> App<'a> {
             .borders(Borders::ALL)
             .style(Style::default().bg(Color::Blue));
 
-        if let Some(log_text) = self.list_items.selected_item() {
-            let paragraph = Paragraph::new(Text::raw(log_text.text()))
-                .block(block)
-                .wrap(Wrap { trim: false });
-
-            f.render_widget(paragraph, *area);
+        // if let Some(log_text) = self.list_items.selected_item() {
+        if let Some(log_textarea) = &mut self.log_textarea {
+            log_textarea.set_block(block);
+            f.render_widget(log_textarea.widget(), *area);
         }
+        // }
     }
 
     fn render_log_list(&mut self, f: &mut Frame, area: &Rect) {
