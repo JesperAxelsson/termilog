@@ -1,19 +1,38 @@
 use ratatui::widgets::ListState;
 use std::{cmp, mem};
 
+use log::trace;
+
 use crate::log_line::LogData;
 use crate::log_line::LogLine;
 
 pub struct StatefulList {
     pub state: ListState,
-    pub items: LogData,
+    items: LogData,
+    index_list: Vec<usize>,
+    cutoff: usize,
 }
 
 impl StatefulList {
     pub fn with_items(items: LogData) -> StatefulList {
-        StatefulList {
+        let index_list: Vec<usize> = (0..items.len()).collect();
+
+        let mut lst = StatefulList {
             state: ListState::default(),
+            index_list,
             items,
+            cutoff: 0,
+        };
+
+        lst.update_ix_list();
+
+        lst
+    }
+
+    fn update_ix_list(&mut self) {
+        self.index_list.clear();
+        for (ix, _log) in self.items.log_lines().iter().enumerate().skip(self.cutoff) {
+            self.index_list.push(ix);
         }
     }
 
@@ -23,25 +42,43 @@ impl StatefulList {
         if let Some(state) = self.state.selected() {
             *self.state.selected_mut() = Some(cmp::min(state, data_len));
         }
+        self.update_ix_list();
     }
 
     pub fn append_text(&mut self, content: &str) {
         let items = mem::replace(&mut self.items, LogData::empty());
         self.items = items.append_text(content);
+        // TODO: Consider filtering only new lines rather then all the lines
+        self.update_ix_list();
     }
 
-    pub fn iter(&self) -> std::slice::Iter<'_, LogLine<'_>> {
-         self
-            .items
-            .borrow_dependent()
-            .0
+    pub fn set_cutoff(&mut self, cutoff: usize) {
+        self.cutoff = cutoff;
+
+        self.update_ix_list();
+    }
+
+    pub fn clear_all(&mut self) {
+        self.unselect();
+        self.set_cutoff(self.items.len());
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &LogLine<'_>> + '_ {
+        self.index_list
             .iter()
+            .map(|ix| self.items.borrow_dependent().0.get(*ix).unwrap())
     }
 
     pub fn next(&mut self) {
+        if self.index_list.is_empty() {
+            self.unselect();
+            trace!("Hello {:?}", self.state.selected());
+            return;
+        }
+
         let i = match self.state.selected() {
             Some(i) => {
-                if i >= self.items.len() - 1 {
+                if i >= self.index_list.len() - 1 {
                     0
                 } else {
                     i + 1
@@ -53,10 +90,15 @@ impl StatefulList {
     }
 
     pub fn previous(&mut self) {
+        if self.index_list.is_empty() {
+            self.unselect();
+            return;
+        }
+
         let i = match self.state.selected() {
             Some(i) => {
                 if i == 0 {
-                    self.items.len() - 1
+                    self.index_list.len() - 1
                 } else {
                     i - 1
                 }
@@ -67,7 +109,7 @@ impl StatefulList {
     }
 
     pub fn goto_start(&mut self) {
-        if self.items.len() > 0 {
+        if self.index_list.len() > 0 {
             self.state.select(Some(0));
         } else {
             self.state.select(None);
@@ -75,17 +117,17 @@ impl StatefulList {
     }
 
     pub fn goto_end(&mut self) {
-        if self.items.len() > 0 {
-            self.state.select(Some(self.items.len() - 1));
+        if self.index_list.len() > 0 {
+            self.state.select(Some(self.index_list.len() - 1));
         } else {
             self.state.select(None);
         }
     }
 
     pub fn jump_relative(&mut self, jump: isize) {
-        if self.items.len() > 0 {
+        if self.index_list.len() > 0 {
             let curent_ix = self.state.offset() as isize;
-            let ix = (curent_ix + jump).clamp(0, self.items.len() as isize - 1);
+            let ix = (curent_ix + jump).clamp(0, self.index_list.len() as isize - 1);
             self.state.select(Some(ix as usize));
         }
     }
@@ -103,3 +145,7 @@ impl StatefulList {
         None
     }
 }
+
+// impl Iterator for StatefulList {
+//
+// }

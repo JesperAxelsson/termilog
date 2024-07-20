@@ -168,6 +168,11 @@ impl<'a> App<'a> {
                     AppMode::Normal => {
                         match key.code {
                             KeyCode::Char('f') => self.follow_mode = !self.follow_mode,
+                            KeyCode::Char('c') => {
+                                self.list_items.clear_all();
+                                self.log_textarea = None;
+                            }
+                            KeyCode::Char('x') => self.list_items.set_cutoff(0),
                             KeyCode::Char('?') => self.app_mode = AppMode::ShowingKeybindings,
                             KeyCode::Char('/') => self.app_mode = AppMode::EditingFilter,
                             KeyCode::Tab => self.app_mode = AppMode::FocusLogText,
@@ -194,6 +199,10 @@ impl<'a> App<'a> {
                             let ss: String = log_text.text().to_owned();
                             let lines: Vec<_> = ss.lines().map(String::from).collect();
                             self.log_textarea = Some(TextArea::new(lines));
+                            trace!("Log text some");
+                        } else {
+                            trace!("Log text none");
+                            self.log_textarea = None;
                         }
                     }
                     AppMode::FocusLogText if key.kind == KeyEventKind::Press => match key.code {
