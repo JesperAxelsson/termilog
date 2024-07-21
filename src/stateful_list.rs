@@ -7,9 +7,16 @@ use crate::log_line::LogData;
 use crate::log_line::LogLine;
 
 pub struct StatefulList {
+    /// Keeps track of UI list state
     pub state: ListState,
+
+    /// Parsed log data
     items: LogData,
+
+    /// Filtered and ordered index of logs
     index_list: Vec<usize>,
+
+    /// Skip the first <cutoff> logs
     cutoff: usize,
 }
 
@@ -29,6 +36,7 @@ impl StatefulList {
         lst
     }
 
+    /// Rerun filter and cutoff
     fn update_ix_list(&mut self) {
         self.index_list.clear();
         for (ix, _log) in self.items.log_lines().iter().enumerate().skip(self.cutoff) {
@@ -36,6 +44,8 @@ impl StatefulList {
         }
     }
 
+    /// Changes the current logdata, used when current log file is removed or 
+    /// cleared outside this program
     pub fn change_log_data(&mut self, log_data: LogData) {
         let data_len = log_data.len();
         self.items = log_data;
@@ -45,6 +55,7 @@ impl StatefulList {
         self.update_ix_list();
     }
 
+    /// Add new text to current log data
     pub fn append_text(&mut self, content: &str) {
         let items = mem::replace(&mut self.items, LogData::empty());
         self.items = items.append_text(content);

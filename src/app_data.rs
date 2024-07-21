@@ -53,18 +53,24 @@ pub struct App<'a> {
     file: FileInfo,
     list_items: StatefulList,
 
+    /// Should scroll as new logs come in
     follow_mode: bool,
 
+    /// List of regex filters
     filter: Option<Vec<String>>,
 
+    /// Current app state
     app_mode: AppMode,
 
+    /// Show keybindings
+    /// TODO: Make keybingings configurable
     keybindings: Vec<KeyBinding>,
     keybindings_state: TableState,
 
     textarea: TextArea<'a>,
     log_textarea: Option<TextArea<'a>>,
 
+    /// Should exit 
     exit: bool,
 }
 
