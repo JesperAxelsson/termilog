@@ -27,11 +27,10 @@ pub fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
         .split(popup_layout[1])[1]
 }
 
-// pub fn shrink_rect(rect: Rect, shrink: u16) -> Rect {
-//     Rect::new(
-//         rect.x - shrink,
-//         rect.y - shrink,
-//         rect.width - shrink,
-//         rect.height - shrink,
-//     )
-// }
+pub fn make_title(title: &str, has_focus: bool) -> String {
+    if has_focus {
+        format!("| >{}< |", title)
+    } else {
+        format!("|  {}  |", title)
+    }
+}

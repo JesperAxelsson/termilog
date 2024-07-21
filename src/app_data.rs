@@ -11,7 +11,7 @@ use tui_textarea::TextArea;
 
 use crate::log_line::LogData;
 use crate::stateful_list::StatefulList;
-use crate::ui;
+use crate::ui::{self, make_title};
 
 #[derive(Debug)]
 pub struct KeyBinding {
@@ -357,14 +357,11 @@ impl<'a> App<'a> {
     }
 
     fn render_full_log(&mut self, f: &mut Frame, area: &Rect) {
-        let title = if self.app_mode == AppMode::FocusLogText {
-            "| >Content< |"
-        } else {
-            "|  Content  |"
-        };
-
         let block = Block::default()
-            .title(title)
+            .title(make_title(
+                "Content",
+                self.app_mode == AppMode::FocusLogText,
+            ))
             .borders(Borders::ALL)
             .style(Style::default().bg(Color::Blue));
 
@@ -401,15 +398,13 @@ impl<'a> App<'a> {
             "   "
         };
 
-        let title = if self.app_mode == AppMode::Normal {
-            "| >List< |"
-        } else {
-            "|  List  |"
-        };
-
         // Create a List from all list items and highlight the currently selected one
         let list_widget = List::new(items)
-            .block(Block::default().borders(Borders::ALL).title(title))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(make_title("List", self.app_mode == AppMode::Normal)),
+            )
             .highlight_style(
                 Style::default()
                     .bg(Color::LightGreen)
