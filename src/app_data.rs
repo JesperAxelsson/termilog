@@ -51,6 +51,7 @@ pub struct FileInfo {
 pub struct App<'a> {
     size: Rect,
     file: FileInfo,
+    /// Parsed logs
     list_items: StatefulList,
 
     /// Should scroll as new logs come in
