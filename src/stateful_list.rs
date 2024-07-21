@@ -157,6 +157,3 @@ impl StatefulList {
     }
 }
 
-// impl Iterator for StatefulList {
-//
-// }

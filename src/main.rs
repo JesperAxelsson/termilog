@@ -31,10 +31,9 @@ mod ui;
 
 // # Planned and missing features:
 // - Show enabled modes and status in status bar
-// - Clear toggle to empty visible logs
 // - Scroll bar for logs...
-// - Fix formatting in the full size log window
 // - Group duplicated messages
+// - Add focus modes. Log list only, Log text only, Both side by side.
 
 
 /// Laravel log reader
