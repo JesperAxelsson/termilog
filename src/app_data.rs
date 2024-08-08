@@ -71,7 +71,7 @@ pub struct App<'a> {
     textarea: TextArea<'a>,
     log_textarea: Option<TextArea<'a>>,
 
-    /// Should exit 
+    /// Should exit
     exit: bool,
 }
 
@@ -217,15 +217,7 @@ impl<'a> App<'a> {
             _ => {}
         }
 
-        if let Some(log_text) = self.list_items.selected_item() {
-            let ss: String = log_text.text().to_owned();
-            let lines: Vec<_> = ss.lines().map(String::from).collect();
-            self.log_textarea = Some(TextArea::new(lines));
-            trace!("Log text some");
-        } else {
-            trace!("Log text none");
-            self.log_textarea = None;
-        }
+        self.update_logtext();
 
         Ok(())
     }
@@ -328,6 +320,7 @@ impl<'a> App<'a> {
 
                 if self.follow_mode {
                     self.list_items.goto_end();
+                    self.update_logtext();
                 }
             } else {
                 // trace!("No file changed");
@@ -337,6 +330,16 @@ impl<'a> App<'a> {
         }
 
         Ok(())
+    }
+
+    fn update_logtext(&mut self) {
+        if let Some(log_text) = self.list_items.selected_item() {
+            let ss: String = log_text.text().to_owned();
+            let lines: Vec<_> = ss.lines().map(String::from).collect();
+            self.log_textarea = Some(TextArea::new(lines));
+        } else {
+            self.log_textarea = None;
+        }
     }
 
     fn ui(&mut self, f: &mut Frame) {
