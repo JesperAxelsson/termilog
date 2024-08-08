@@ -41,7 +41,7 @@ mod ui;
 #[command(version, about, long_about = None)]
 struct Args {
     /// Log file to read from
-    #[arg(default_value = "storage/log/laravel.log")]
+    #[arg(default_value = "./storage/log/laravel.log")]
     log_path: String,
 }
 
