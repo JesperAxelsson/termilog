@@ -343,13 +343,13 @@ impl<'a> App<'a> {
     }
 
     fn ui(&mut self, f: &mut Frame) {
-        let size = f.size();
+        let size = f.area();
         self.size = size;
 
         let chunks = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
-            .split(f.size());
+            .split(f.area());
 
         self.render_log_list(f, &chunks[0]);
         self.render_full_log(f, &chunks[1]);
@@ -362,7 +362,7 @@ impl<'a> App<'a> {
         if self.app_mode == AppMode::EditingFilter {
             let area = ui::centered_rect(60, 20, size);
             f.render_widget(Clear, area); //this clears out the background
-            f.render_widget(self.textarea.widget(), area);
+            f.render_widget(&self.textarea, area);
         }
     }
 
@@ -378,7 +378,7 @@ impl<'a> App<'a> {
         // if let Some(log_text) = self.list_items.selected_item() {
         if let Some(log_textarea) = &mut self.log_textarea {
             log_textarea.set_block(block);
-            f.render_widget(log_textarea.widget(), *area);
+            f.render_widget(&*log_textarea, *area);
         }
         // }
     }
@@ -434,7 +434,7 @@ impl<'a> App<'a> {
     }
 
     fn render_key_bindings(&mut self, f: &mut Frame) {
-        let area = ui::centered_rect(60, 20, f.size());
+        let area = ui::centered_rect(60, 20, f.area());
 
         f.render_widget(Clear, area); //this clears out the background
 
