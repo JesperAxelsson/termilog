@@ -1,8 +1,6 @@
 use ratatui::widgets::ListState;
 use std::{cmp, mem};
 
-use log::trace;
-
 use crate::log_line::LogData;
 use crate::log_line::LogLine;
 
@@ -44,7 +42,7 @@ impl StatefulList {
         }
     }
 
-    /// Changes the current logdata, used when current log file is removed or 
+    /// Changes the current logdata, used when current log file is removed or
     /// cleared outside this program
     pub fn change_log_data(&mut self, log_data: LogData) {
         let data_len = log_data.len();
@@ -83,7 +81,6 @@ impl StatefulList {
     pub fn next(&mut self) {
         if self.index_list.is_empty() {
             self.unselect();
-            trace!("Hello {:?}", self.state.selected());
             return;
         }
 
@@ -150,10 +147,10 @@ impl StatefulList {
     pub fn selected_item(&mut self) -> Option<&LogLine> {
         let ix = self.state.selected();
         if let Some(ix) = ix {
-            return Some(&self.items.log_lines()[ix]);
+            let list_ix = self.index_list[ix];
+            return Some(&self.items.log_lines()[list_ix]);
         }
 
         None
     }
 }
-

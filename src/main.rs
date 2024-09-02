@@ -47,7 +47,7 @@ struct Args {
 
 fn main() -> Result<(), Box<dyn Error>> {
     // let _ = simple_logging::log_to_file("test.log", LevelFilter::Error);
-    let _ = simple_logging::log_to_file("test.log", LevelFilter::Trace);
+    let _ = simple_logging::log_to_file("test.log", LevelFilter::Info);
     info!("Starting up!");
     let args = Args::parse();
 
