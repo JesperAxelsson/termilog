@@ -1,4 +1,5 @@
 use log::{info, trace};
+use ratatui::widgets::block::Title;
 use ratatui::{prelude::*, widgets::*};
 use std::io::{Seek, SeekFrom};
 use std::{fs::metadata, io, time::Duration};
@@ -186,7 +187,10 @@ impl<'a> App<'a> {
     fn handle_events_log_list(&mut self, key: KeyEvent) -> io::Result<()> {
         // info!("Key event: {:?}", key);
         match key.code {
-            KeyCode::Char('f') => self.follow_mode = !self.follow_mode,
+            KeyCode::Char('f') =>{
+                self.follow_mode = !self.follow_mode;
+                self.list_items.goto_end();
+            },
             KeyCode::Char('c') => {
                 if key.modifiers.contains(KeyModifiers::CONTROL) {
                     self.list_items.set_cutoff();
@@ -218,22 +222,28 @@ impl<'a> App<'a> {
                 }
             }
 
-            KeyCode::PageUp => self
-                .list_items
-                .jump_relative(-((self.size.height - 4) as isize)),
-            KeyCode::PageDown => self
-                .list_items
-                .jump_relative((self.size.height - 4) as isize),
-
-            KeyCode::Home => self.list_items.goto_start(),
-            KeyCode::End => self.list_items.goto_end(),
-            KeyCode::Left => self.list_items.unselect(),
-            KeyCode::Down => self.list_items.next(),
-            KeyCode::Up => self.list_items.previous(),
             KeyCode::Esc => {
                 self.hide_popups();
             }
             _ => {}
+        }
+
+        if !self.follow_mode {
+            match key.code {
+                KeyCode::PageUp => self
+                    .list_items
+                    .jump_relative(-((self.size.height - 4) as isize)),
+                KeyCode::PageDown => self
+                    .list_items
+                    .jump_relative((self.size.height - 4) as isize),
+
+                KeyCode::Home => self.list_items.goto_start(),
+                KeyCode::End => self.list_items.goto_end(),
+                KeyCode::Left => self.list_items.unselect(),
+                KeyCode::Down => self.list_items.next(),
+                KeyCode::Up => self.list_items.previous(),
+                _ => {}
+            }
         }
 
         self.update_logtext();
@@ -381,7 +391,10 @@ impl<'a> App<'a> {
         //     .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
         //     .split(f.area());
 
-        f.render_widget(Block::bordered().title("Title Bar"), title_area);
+        f.render_widget(
+            Block::new().borders(Borders::TOP).title("Termilog"),
+            title_area,
+        );
         self.render_log_list(f, &left_area);
         self.render_full_log(f, &right_area);
         self.render_status_bar(f, &status_area);
@@ -489,18 +502,20 @@ impl<'a> App<'a> {
     }
 
     fn render_status_bar(&mut self, f: &mut Frame, area: &Rect) {
-        let status_line = format!(
-            "{:?}/{:?}({:?}) Follow: {}",
+        let status_left = Title::from(format!(
+            " Follow: {}",
+            if self.follow_mode { "on" } else { "off" }
+        ))
+        .alignment(Alignment::Left);
+
+        let status_right = Line::from(format!(
+            "{:?}/{:?}({:?}) ",
             self.list_items.state.selected().unwrap_or_default() + 1,
             self.list_items.len(),
             self.list_items.inner_len(),
-            if self.follow_mode { "on" } else { "off" }
-        );
-        // let status_line = Line::from(vec![
-        //     Span::raw("First"),
-        //     Span::styled("line", Style::new().green().italic()),
-        //     ".".into(),
-        // ]);
-        f.render_widget(Block::bordered().title(status_line), *area);
+        ))
+        .alignment(Alignment::Right);
+
+        f.render_widget(Block::new().title(status_left).title(status_right), *area);
     }
 }
