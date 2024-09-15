@@ -61,6 +61,10 @@ impl StatefulList {
         self.update_ix_list();
     }
 
+    pub fn get_cutoff(&mut self) -> usize {
+        self.cutoff
+    }
+
     pub fn set_cutoff(&mut self, cutoff: usize) {
         self.cutoff = cutoff;
 
@@ -152,5 +156,13 @@ impl StatefulList {
         }
 
         None
+    }
+
+    pub fn len(&self) -> usize {
+        self.index_list.len()
+    }
+
+    pub fn inner_len(&self) -> usize {
+        self.items.len()
     }
 }

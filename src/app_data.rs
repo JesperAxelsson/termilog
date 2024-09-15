@@ -1,4 +1,4 @@
-use log::trace;
+use log::{info, trace};
 use ratatui::{prelude::*, widgets::*};
 use std::io::{Seek, SeekFrom};
 use std::{fs::metadata, io, time::Duration};
@@ -184,11 +184,19 @@ impl<'a> App<'a> {
     }
 
     fn handle_events_log_list(&mut self, key: KeyEvent) -> io::Result<()> {
+        info!("Key event: {:?}", key);
         match key.code {
             KeyCode::Char('f') => self.follow_mode = !self.follow_mode,
             KeyCode::Char('c') => {
                 self.list_items.clear_all();
                 self.log_textarea = None;
+            }
+            KeyCode::Char('k') => {
+                if let Some(ix) = self.list_items.state.selected() {
+                    info!("Got ix: {}", ix);
+                }
+                // self.list_items.set_cutoff();
+                // self.log_textarea = None;
             }
             KeyCode::Char('x') => self.list_items.set_cutoff(0),
             KeyCode::Char('?') => self.app_mode = AppMode::ShowingKeybindings,
@@ -346,13 +354,26 @@ impl<'a> App<'a> {
         let size = f.area();
         self.size = size;
 
-        let chunks = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
-            .split(f.area());
+        let [title_area, main_area, status_area] = Layout::vertical([
+            Constraint::Length(1),
+            Constraint::Min(0),
+            Constraint::Length(1),
+        ])
+        .areas(f.area());
 
-        self.render_log_list(f, &chunks[0]);
-        self.render_full_log(f, &chunks[1]);
+        let [left_area, right_area] =
+            Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)])
+                .areas(main_area);
+
+        // let chunks = Layout::default()
+        //     .direction(Direction::Horizontal)
+        //     .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
+        //     .split(f.area());
+
+        f.render_widget(Block::bordered().title("Title Bar"), title_area);
+        self.render_log_list(f, &left_area);
+        self.render_full_log(f, &right_area);
+        self.render_status_bar(f, &status_area);
 
         // Render popup
         if self.app_mode == AppMode::ShowingKeybindings {
@@ -454,5 +475,21 @@ impl<'a> App<'a> {
             .highlight_symbol(">");
 
         f.render_stateful_widget(table, area, &mut self.keybindings_state)
+    }
+
+    fn render_status_bar(&mut self, f: &mut Frame, area: &Rect) {
+        let status_line = format!(
+            "{:?}/{:?}({:?}) Follow: {}",
+            self.list_items.state.selected().unwrap_or_default() + 1,
+            self.list_items.len(),
+            self.list_items.inner_len(),
+            if self.follow_mode { "on" } else { "off" }
+        );
+        // let status_line = Line::from(vec![
+        //     Span::raw("First"),
+        //     Span::styled("line", Style::new().green().italic()),
+        //     ".".into(),
+        // ]);
+        f.render_widget(Block::bordered().title(status_line), *area);
     }
 }
