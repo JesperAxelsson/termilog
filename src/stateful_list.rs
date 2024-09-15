@@ -47,7 +47,7 @@ impl StatefulList {
 
         if self.filter.len() > 0 {
             for (ix, log) in ix_iter {
-                if self.filter.iter().any(|pat| log.text().to_ascii_lowercase().contains(pat)) {
+                if self.filter.iter().any(|pat| log.text().contains(pat)) {
                     self.index_list.push(ix);
                 }
             }

@@ -278,7 +278,7 @@ impl<'a> App<'a> {
                         if !line.is_empty() {
                             self.list_items
                                 .filter
-                                .push(line.to_string().to_ascii_lowercase());
+                                .push(line.to_string());
                         }
                     }
                     self.list_items.update_ix_list();
