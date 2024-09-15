@@ -20,21 +20,19 @@ use std::{
 
 use app_data::App;
 
-use crate::app_data::FileInfo;
+use crate::{app_data::FileInfo, log_line::LogData};
 
-mod log_line;
 mod app_data;
+mod log_line;
 mod raw_parse;
 mod stateful_list;
 mod ui;
-
 
 // # Planned and missing features:
 // - Show enabled modes and status in status bar
 // - Scroll bar for logs...
 // - Group duplicated messages
 // - Add focus modes. Log list only, Log text only, Both side by side.
-
 
 /// Laravel log reader
 #[derive(Parser, Debug)]
@@ -53,31 +51,35 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let now = Instant::now();
 
-    let meta = metadata(&args.log_path).expect("Failed to get meta data from path");
-    if !meta.is_file() {
-        eprintln!("Parameter log file is not a file!");
-        exit(-1);
+    let mut file_size = 0;
+    let mut log_data = LogData::empty();
+
+    if let Ok(meta) = metadata(&args.log_path) {
+        if !meta.is_file() {
+            eprintln!("Parameter log file is not a file!");
+            exit(-1);
+        }
+
+        file_size = meta.len();
+
+        let mut file = File::open(&args.log_path)?;
+        let mut contents = String::new();
+        file.read_to_string(&mut contents)?;
+
+        println!("Read file: {}ms", now.elapsed().as_millis());
+        let now = Instant::now();
+
+        let parser = raw_parse::RawParser {};
+        let log_lines = parser.parse_lines(&contents);
+
+         log_data = parser.map_log(contents.clone(), log_lines.clone());
+
+        println!(
+            "Number of lines: {} in {}ms",
+            log_lines.len(),
+            now.elapsed().as_millis()
+        );
     }
-
-    let file_size = meta.len();
-
-    let mut file = File::open(&args.log_path)?;
-    let mut contents = String::new();
-    file.read_to_string(&mut contents)?;
-
-    println!("Read file: {}ms", now.elapsed().as_millis());
-    let now = Instant::now();
-
-    let parser = raw_parse::RawParser {};
-    let log_lines = parser.parse_lines(&contents);
-
-    let ll = parser.map_log(contents.clone(), log_lines.clone());
-
-    println!(
-        "Number of lines: {} in {}ms",
-        log_lines.len(),
-        now.elapsed().as_millis()
-    );
 
     // setup terminal
     enable_raw_mode()?;
@@ -96,7 +98,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             name: args.log_path,
             size: file_size,
         },
-        ll,
+        log_data,
     );
     let res = app.run_app(&mut terminal);
 
