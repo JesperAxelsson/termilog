@@ -58,9 +58,6 @@ pub struct App<'a> {
     /// Should scroll as new logs come in
     follow_mode: bool,
 
-    /// List of regex filters
-    filter: Option<Vec<String>>,
-
     /// Current app state
     app_mode: AppMode,
 
@@ -127,8 +124,6 @@ impl<'a> App<'a> {
             list_items: StatefulList::with_items(log_data),
 
             follow_mode: false,
-
-            filter: None,
 
             app_mode: AppMode::Normal,
 
@@ -269,21 +264,29 @@ impl<'a> App<'a> {
     fn handle_events_filter(&mut self, key: KeyEvent) -> io::Result<()> {
         if key.kind == KeyEventKind::Press {
             match key.code {
-                // KeyCode::Enter => {
-                //     self.filter = Some(self.textarea.lines().iter().cloned().collect());
-                //     trace!("Filter: {:?}", self.filter);
-                //
-                //     self.app_mode = AppMode::Normal;
-                //     self.hide_popups()
-                // }
                 KeyCode::Esc => {
-                    trace!("Input: {:?}", self.filter);
+                    // info!("Input here?: {:?}", self.list_items.filter);
 
                     self.app_mode = AppMode::Normal;
                     self.hide_popups();
                 }
                 _ => {
                     self.textarea.input(key);
+
+                    self.list_items.filter.clear();
+                    for line in self.textarea.lines().iter().map(|s| s.trim()) {
+                        if !line.is_empty() {
+                            self.list_items
+                                .filter
+                                .push(line.to_string().to_ascii_lowercase());
+                        }
+                    }
+                    self.list_items.update_ix_list();
+                    // info!(
+                    //     "Got text!: {:?} {:?}",
+                    //     self.textarea.lines().join(","),
+                    //     self.list_items.filter
+                    // );
                 }
             }
         }
@@ -414,7 +417,7 @@ impl<'a> App<'a> {
             ))
             .borders(Borders::ALL)
             .style(Style::default());
-            // .style(Style::default().bg(Color::Black).fg(Color::White));
+        // .style(Style::default().bg(Color::Black).fg(Color::White));
 
         // if let Some(log_text) = self.list_items.selected_item() {
         if let Some(log_textarea) = &mut self.log_textarea {
@@ -425,8 +428,10 @@ impl<'a> App<'a> {
     }
 
     fn render_log_list(&mut self, f: &mut Frame, area: &Rect) {
+        // info!("Got area: {:?}", area);
         // Iterate through all elements in the `items` app and append some debug text to it.
         // TODO: Cache or something se we don't recreate this every render
+        let width = area.width - 6;
         let mut item_state = self.list_items.state.clone();
         let items: Vec<ListItem> = self
             .list_items
@@ -435,7 +440,7 @@ impl<'a> App<'a> {
                 let mut lines = vec![Line::from(i.info())];
                 // for _ in 0..i.1 {
                 lines.push(Line::from(Span::styled(
-                    i.slug(30),
+                    i.slug(width as usize),
                     Style::default().add_modifier(Modifier::ITALIC),
                 )));
                 // }
@@ -458,7 +463,8 @@ impl<'a> App<'a> {
             )
             .highlight_style(
                 Style::default()
-                    .bg(Color::LightGreen)
+                    .bg(Color::White)
+                    .fg(Color::Black)
                     .add_modifier(Modifier::BOLD),
             )
             .highlight_symbol(highlight_symbol);

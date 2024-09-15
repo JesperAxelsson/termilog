@@ -1,3 +1,4 @@
+use log::info;
 use ratatui::widgets::ListState;
 use std::{cmp, mem};
 
@@ -10,6 +11,10 @@ pub struct StatefulList {
 
     /// Parsed log data
     items: LogData,
+
+    /// Filter log data by these filters
+    /// public because I'm lazy
+    pub filter: Vec<String>,
 
     /// Filtered and ordered index of logs
     index_list: Vec<usize>,
@@ -26,6 +31,7 @@ impl StatefulList {
             state: ListState::default(),
             index_list,
             items,
+            filter: Vec::new(),
             cutoff: 0,
         };
 
@@ -35,10 +41,20 @@ impl StatefulList {
     }
 
     /// Rerun filter and cutoff
-    fn update_ix_list(&mut self) {
+    pub fn update_ix_list(&mut self) {
         self.index_list.clear();
-        for (ix, _log) in self.items.log_lines().iter().enumerate().skip(self.cutoff) {
-            self.index_list.push(ix);
+        let ix_iter = self.items.log_lines().iter().enumerate().skip(self.cutoff);
+
+        if self.filter.len() > 0 {
+            for (ix, log) in ix_iter {
+                if self.filter.iter().any(|pat| log.text().to_ascii_lowercase().contains(pat)) {
+                    self.index_list.push(ix);
+                }
+            }
+        } else {
+            for (ix, _log) in ix_iter {
+                self.index_list.push(ix);
+            }
         }
     }
 
@@ -183,3 +199,8 @@ impl StatefulList {
         None
     }
 }
+
+// Filter stuff
+// impl StatefulList {
+//     pub fn add_filter(&mut self,
+// }

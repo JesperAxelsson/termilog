@@ -29,10 +29,11 @@ mod stateful_list;
 mod ui;
 
 // # Planned and missing features:
-// - Show enabled modes and status in status bar
+// - Show enabled modes and status in status bar, partially done
 // - Scroll bar for logs...
 // - Group duplicated messages
 // - Add focus modes. Log list only, Log text only, Both side by side.
+// - Filter logs
 
 /// Laravel log reader
 #[derive(Parser, Debug)]
