@@ -444,7 +444,7 @@ impl<'a> App<'a> {
                     Style::default().add_modifier(Modifier::ITALIC),
                 )));
                 // }
-                ListItem::new(lines).style(Style::default().fg(Color::White).bg(Color::Black))
+                ListItem::new(lines).style(Style::default())
             })
             .collect();
 
