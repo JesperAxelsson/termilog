@@ -187,10 +187,10 @@ impl<'a> App<'a> {
     fn handle_events_log_list(&mut self, key: KeyEvent) -> io::Result<()> {
         // info!("Key event: {:?}", key);
         match key.code {
-            KeyCode::Char('f') =>{
+            KeyCode::Char('f') => {
                 self.follow_mode = !self.follow_mode;
                 self.list_items.goto_end();
-            },
+            }
             KeyCode::Char('c') => {
                 if key.modifiers.contains(KeyModifiers::CONTROL) {
                     self.list_items.set_cutoff();
@@ -386,13 +386,8 @@ impl<'a> App<'a> {
             Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)])
                 .areas(main_area);
 
-        // let chunks = Layout::default()
-        //     .direction(Direction::Horizontal)
-        //     .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
-        //     .split(f.area());
-
         f.render_widget(
-            Block::new().borders(Borders::TOP).title("Termilog"),
+            Block::new().borders(Borders::TOP).title("─ Termilog "),
             title_area,
         );
         self.render_log_list(f, &left_area);
@@ -418,7 +413,8 @@ impl<'a> App<'a> {
                 self.app_mode == AppMode::FocusLogText,
             ))
             .borders(Borders::ALL)
-            .style(Style::default().bg(Color::Blue));
+            .style(Style::default());
+            // .style(Style::default().bg(Color::Black).fg(Color::White));
 
         // if let Some(log_text) = self.list_items.selected_item() {
         if let Some(log_textarea) = &mut self.log_textarea {
@@ -443,7 +439,7 @@ impl<'a> App<'a> {
                     Style::default().add_modifier(Modifier::ITALIC),
                 )));
                 // }
-                ListItem::new(lines).style(Style::default().fg(Color::Black).bg(Color::White))
+                ListItem::new(lines).style(Style::default().fg(Color::White).bg(Color::Black))
             })
             .collect();
 
