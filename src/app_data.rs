@@ -4,7 +4,7 @@ use std::io::{Seek, SeekFrom};
 use std::{fs::metadata, io, time::Duration};
 use std::{fs::File, io::Read};
 
-use crossterm::event::{self, KeyEvent};
+use crossterm::event::{self, KeyEvent, KeyModifiers};
 use crossterm::event::{Event, KeyCode, KeyEventKind};
 
 use tui_textarea::TextArea;
@@ -184,13 +184,24 @@ impl<'a> App<'a> {
     }
 
     fn handle_events_log_list(&mut self, key: KeyEvent) -> io::Result<()> {
-        info!("Key event: {:?}", key);
+        // info!("Key event: {:?}", key);
         match key.code {
             KeyCode::Char('f') => self.follow_mode = !self.follow_mode,
             KeyCode::Char('c') => {
-                self.list_items.clear_all();
-                self.log_textarea = None;
+                if key.modifiers.contains(KeyModifiers::CONTROL) {
+                    self.list_items.set_cutoff();
+                    self.list_items.goto_start();
+                } else {
+                    if self.list_items.len() > 0 {
+                        self.list_items.clear_all();
+                        self.log_textarea = None;
+                    } else {
+                        self.list_items.reset_cutoff();
+                    }
+                }
             }
+            KeyCode::Char('C') => self.list_items.reset_cutoff(),
+
             KeyCode::Char('k') => {
                 if let Some(ix) = self.list_items.state.selected() {
                     info!("Got ix: {}", ix);
@@ -198,7 +209,7 @@ impl<'a> App<'a> {
                 // self.list_items.set_cutoff();
                 // self.log_textarea = None;
             }
-            KeyCode::Char('x') => self.list_items.set_cutoff(0),
+            KeyCode::Char('x') => self.list_items.reset_cutoff(),
             KeyCode::Char('?') => self.app_mode = AppMode::ShowingKeybindings,
             KeyCode::Char('/') => self.app_mode = AppMode::EditingFilter,
             KeyCode::Tab => {

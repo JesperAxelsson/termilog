@@ -65,15 +65,24 @@ impl StatefulList {
         self.cutoff
     }
 
-    pub fn set_cutoff(&mut self, cutoff: usize) {
-        self.cutoff = cutoff;
+    pub fn set_cutoff(&mut self) {
+        self.internal_set_cutoff(self.selected_index().unwrap_or_default());
+    }
 
-        self.update_ix_list();
+    pub fn reset_cutoff(&mut self) {
+        self.internal_set_cutoff(0)
     }
 
     pub fn clear_all(&mut self) {
         self.unselect();
-        self.set_cutoff(self.items.len());
+        self.internal_set_cutoff(self.items.len());
+    }
+
+    fn internal_set_cutoff(&mut self, cutoff: usize) {
+        // TODO: When we change cutoff we want to keep current selected item if possible
+        self.cutoff = cutoff;
+
+        self.update_ix_list();
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &LogLine<'_>> + '_ {
@@ -149,10 +158,9 @@ impl StatefulList {
     }
 
     pub fn selected_item(&mut self) -> Option<&LogLine> {
-        let ix = self.state.selected();
+        let ix = self.selected_index();
         if let Some(ix) = ix {
-            let list_ix = self.index_list[ix];
-            return Some(&self.items.log_lines()[list_ix]);
+            return Some(&self.items.log_lines()[ix]);
         }
 
         None
@@ -164,5 +172,14 @@ impl StatefulList {
 
     pub fn inner_len(&self) -> usize {
         self.items.len()
+    }
+
+    fn selected_index(&self) -> Option<usize> {
+        let ix = self.state.selected();
+        if let Some(ix) = ix {
+            return Some(self.index_list[ix]);
+        }
+
+        None
     }
 }
