@@ -75,10 +75,17 @@ pub struct App<'a> {
 
 #[derive(Debug, PartialEq, Eq)]
 enum AppMode {
-    Normal,
+    SideBySide(Focus),
+    FocusLogLines,
     FocusLogText,
     EditingFilter,
     ShowingKeybindings,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum Focus {
+    LogLines,
+    LogText,
 }
 
 // pub enum AppState {
@@ -125,7 +132,7 @@ impl<'a> App<'a> {
 
             follow_mode: false,
 
-            app_mode: AppMode::Normal,
+            app_mode: AppMode::SideBySide(Focus::LogLines),
 
             keybindings,
             keybindings_state: TableState::default(),
@@ -168,7 +175,9 @@ impl<'a> App<'a> {
                 }
 
                 match self.app_mode {
-                    AppMode::Normal => self.handle_events_log_list(key)?,
+                    AppMode::SideBySide(Focus::LogLines) => self.handle_events_log_list(key)?,
+                    AppMode::SideBySide(Focus::LogText) => self.handle_events_log_text(key)?,
+                    AppMode::FocusLogLines => self.handle_events_log_list(key)?,
                     AppMode::FocusLogText => self.handle_events_log_text(key)?,
                     AppMode::EditingFilter => self.handle_events_filter(key)?,
                     AppMode::ShowingKeybindings => self.handle_events_show_keybindings(key)?,
@@ -249,7 +258,7 @@ impl<'a> App<'a> {
     fn handle_events_log_text(&mut self, key: KeyEvent) -> io::Result<()> {
         if key.kind == KeyEventKind::Press {
             match key.code {
-                KeyCode::Esc => self.app_mode = AppMode::Normal,
+                KeyCode::Esc => self.app_mode = AppMode::SideBySide(Focus::LogLines),
                 _ => {
                     if let Some(text_area) = &mut self.log_textarea {
                         text_area.input(key);
@@ -267,7 +276,7 @@ impl<'a> App<'a> {
                 KeyCode::Esc => {
                     // info!("Input here?: {:?}", self.list_items.filter);
 
-                    self.app_mode = AppMode::Normal;
+                    self.app_mode = AppMode::SideBySide(Focus::LogLines);
                     self.hide_popups();
                 }
                 _ => {
@@ -276,9 +285,7 @@ impl<'a> App<'a> {
                     self.list_items.filter.clear();
                     for line in self.textarea.lines().iter().map(|s| s.trim()) {
                         if !line.is_empty() {
-                            self.list_items
-                                .filter
-                                .push(line.to_string());
+                            self.list_items.filter.push(line.to_string());
                         }
                     }
                     self.list_items.update_ix_list();
@@ -317,7 +324,7 @@ impl<'a> App<'a> {
                 // trace!("Keybind down {:?}", self.keybindings_state);
             }
             KeyCode::Esc => {
-                self.app_mode = AppMode::Normal;
+                self.app_mode = AppMode::SideBySide(Focus::LogLines);
                 self.hide_popups();
             }
             _ => {}
@@ -448,7 +455,7 @@ impl<'a> App<'a> {
             })
             .collect();
 
-        let highlight_symbol = if self.app_mode == AppMode::Normal {
+        let highlight_symbol = if self.app_mode == AppMode::SideBySide(Focus::LogLines) {
             ">> "
         } else {
             "   "
@@ -456,11 +463,10 @@ impl<'a> App<'a> {
 
         // Create a List from all list items and highlight the currently selected one
         let list_widget = List::new(items)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title(make_title("List", self.app_mode == AppMode::Normal)),
-            )
+            .block(Block::default().borders(Borders::ALL).title(make_title(
+                "List",
+                self.app_mode == AppMode::SideBySide(Focus::LogLines),
+            )))
             .highlight_style(
                 Style::default()
                     .bg(Color::White)
@@ -477,7 +483,7 @@ impl<'a> App<'a> {
     }
 
     fn hide_popups(&mut self) {
-        self.app_mode = AppMode::Normal;
+        self.app_mode = AppMode::SideBySide(Focus::LogLines);
     }
 
     fn render_key_bindings(&mut self, f: &mut Frame) {
@@ -505,13 +511,13 @@ impl<'a> App<'a> {
 
     fn render_status_bar(&mut self, f: &mut Frame, area: &Rect) {
         let status_left = Title::from(format!(
-            " Follow: {}",
+            "│ Follow: {}",
             if self.follow_mode { "on" } else { "off" }
         ))
         .alignment(Alignment::Left);
 
         let status_right = Line::from(format!(
-            "{:?}/{:?}({:?}) ",
+            "{:?}/{:?}({:?}) │",
             self.list_items.state.selected().unwrap_or_default() + 1,
             self.list_items.len(),
             self.list_items.inner_len(),
