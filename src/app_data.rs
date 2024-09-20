@@ -220,9 +220,18 @@ impl<'a> App<'a> {
             KeyCode::Char('x') => self.list_items.reset_cutoff(),
             KeyCode::Char('?') => self.app_mode = AppMode::ShowingKeybindings,
             KeyCode::Char('/') => self.app_mode = AppMode::EditingFilter,
-            KeyCode::Tab => {
+
+            KeyCode::Char('1') => self.app_mode = AppMode::FocusLogLines,
+            KeyCode::Char('2') => self.app_mode = AppMode::SideBySide(Focus::LogLines),
+            KeyCode::Char('3') => {
                 if self.list_items.selected_item().is_some() {
                     self.app_mode = AppMode::FocusLogText;
+                }
+            }
+
+            KeyCode::Tab => {
+                if self.list_items.selected_item().is_some() {
+                    self.app_mode = AppMode::SideBySide(Focus::LogText);
                 }
             }
 
@@ -392,16 +401,24 @@ impl<'a> App<'a> {
         ])
         .areas(f.area());
 
-        let [left_area, right_area] =
-            Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)])
-                .areas(main_area);
-
         f.render_widget(
             Block::new().borders(Borders::TOP).title("─ Termilog "),
             title_area,
         );
-        self.render_log_list(f, &left_area);
-        self.render_full_log(f, &right_area);
+
+        match &self.app_mode {
+            AppMode::SideBySide(_focus) => {
+                let [left_area, right_area] =
+                    Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)])
+                        .areas(main_area);
+
+                self.render_log_list(f, &left_area);
+                self.render_full_log(f, &right_area);
+            }
+            AppMode::FocusLogLines => self.render_log_list(f, &main_area),
+            AppMode::FocusLogText => self.render_full_log(f, &main_area),
+            _ => {}
+        }
         self.render_status_bar(f, &status_area);
 
         // Render popup
