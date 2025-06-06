@@ -29,11 +29,13 @@ mod stateful_list;
 mod ui;
 
 // # Planned and missing features:
-// - Show enabled modes and status in status bar, partially done
-// - Scroll bar for logs...
+// it virtual, but then it's not as useful?
 // - Group duplicated messages
-// - Add focus modes. Log list only, Log text only, Both side by side.
-// - Filter logs
+// - Filter in the right side instead of popup?
+// - Scroll bar for logs... Is this really needed? Low prio
+// - Partial update of log lines, so we only filter on new parts when reading from file
+// - Historgram of loglines?
+
 
 /// Laravel log reader
 #[derive(Parser, Debug)]
